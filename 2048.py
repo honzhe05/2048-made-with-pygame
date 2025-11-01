@@ -170,7 +170,8 @@ class arrow_keys(pygame.sprite.Sprite):
 
         pygame.draw.rect(
             self.image, color,
-            self.image.get_rect(), border_radius=8
+            self.image.get_rect(),
+            border_radius=int(screen_size / 63)
         )
         pygame.draw.polygon(
             self.image, (30, 30, 30), pos[self.dir]
@@ -195,7 +196,8 @@ def resize(set_row, set_screen):
 
     row = 4
     screen_size = set_screen
-    block = int(screen_size / row)
+    set_screen = set_screen * 28.2 / 33
+    block = int(set_screen / row)
     grid = int(block / 7)
     grid_big = grid * 0.14
     block_big = block + grid_big * 2
@@ -500,11 +502,11 @@ def update_screen():
 
     r2 = int(screen_size / 11)
     reload_rect = pygame.Rect(
-        sc_w * 0.88, block / 1.8, r2, r2
+        sc_w * 0.85, block / 1.8, r2, r2
     )
     draw_reload_icon(reload_rect.center, r2 / 2)
     resize_rect = pygame.Rect(
-        sc_w * 0.05, block / 1.9, r2, r2
+        sc_w * 0.05, block / 1.8, r2, r2
     )
     draw_resize_icon(resize_rect.center, r2)
     draw_grid()
