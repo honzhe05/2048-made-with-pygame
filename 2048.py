@@ -7,7 +7,7 @@ import math
 from collections import deque
 
 
-# part 1
+# =========== part 1 ===========
 class block_body(pygame.sprite.Sprite):
     def __init__(self, Color, X, Y, Value, anim):
         pygame.sprite.Sprite.__init__(self)
@@ -20,28 +20,32 @@ class block_body(pygame.sprite.Sprite):
         self.image = self.base_image.copy()
         pygame.draw.rect(
             self.base_image, self.color,
-            pygame.Rect(0, 0, block, block),
+            pygame.Rect(0, 0, block_big, block_big),
             border_radius=int(screen_size / 53)
         )
 
         font_sm = pygame.font.SysFont(
-            "comingsoon", int(block*0.5)
+            "comingsoon", int(block_big*0.5)
         )
         font_sm.set_bold(True)
-        text = font_sm.render(str(self.value), True, (60, 58, 50))
-        text_rect = text.get_rect(center=(block/2, block/2))
+        text = font_sm.render(
+            str(self.value), True, (60, 58, 50)
+        )
+        text_rect = text.get_rect(
+            center=(block_big/2, block_big/2)
+        )
         self.base_image.blit(text, text_rect)
 
         self.rect = self.base_image.get_rect()
-        self.X = grid + X * block_width
-        self.Y = block_width + block + Y * block_width
+        self.X = grid - grid_big + X * block_width
+        self.Y = block_width + block - grid_big + Y * block_width
         self.start_pos = pygame.Vector2(self.X, self.Y)
         self.target_pos = pygame.Vector2(self.X, self.Y)
 
         self.move_progress = 1.0
         self.move_speed = 0.48
 
-        self.anim_size = int(block * 0.4)
+        self.anim_size = int(block_big * 0.4)
         self.font_anim = 0.71
 
         self.board_pos = (X, Y)
@@ -66,7 +70,7 @@ class block_body(pygame.sprite.Sprite):
                 board[end[0]][end[1]] = value
                 sprite2.color = color
                 sprite2.value = value
-                sprite2.anim_size = int(block * 0.4)
+                sprite2.anim_size = int(block_big * 0.4)
                 sprite2.font_anim = 0.71
                 sprite2.anim = True
                 sprite2.board_pos = (end[0], end[1])
@@ -82,8 +86,8 @@ class block_body(pygame.sprite.Sprite):
 
             board[start[0]][start[1]] = 0
             board[end[0]][end[1]] = sprite.value
-            tpx = grid + end[0] * block_width
-            tpy = block_width + block + end[1] * block_width
+            tpx = grid - grid_big + end[0] * block_width
+            tpy = block_width + block - grid_big + end[1] * block_width
             sprite.board_pos = (end[0], end[1])
             sprite.prev_X = sprite.X
             sprite.prev_Y = sprite.Y
@@ -98,7 +102,8 @@ class block_body(pygame.sprite.Sprite):
             del path_dict[start]
 
         if moved:
-            global pending_new_tile
+            global pending_new_tile, move_times
+            move_times += 1
             pending_new_tile = True
             save_data()
 
@@ -113,10 +118,10 @@ class block_body(pygame.sprite.Sprite):
         self.X, self.Y = now_pos.x, now_pos.y
 
         if self.anim:
-            if self.anim_size < block:
+            if self.anim_size < block_big:
                 self.anim_size += 30
-                if self.anim_size >= block:
-                    self.anim_size = block
+                if self.anim_size >= block_big:
+                    self.anim_size = block_big
                     self.anim = False
             scaled_image = pygame.transform.smoothscale(
                 self.base_image,
@@ -125,7 +130,8 @@ class block_body(pygame.sprite.Sprite):
             self.image = scaled_image
             self.rect = self.image.get_rect(
                 center=(
-                    self.X + block / 2, self.Y + block / 2
+                    self.X + block_big / 2,
+                    self.Y + block_big / 2
                 )
             )
         else:
@@ -180,10 +186,10 @@ def find_sprite_at(board_x, board_y):
 
 
 def resize(set_row, set_screen):
-    global row, screen_size, block, grid
+    global row, screen_size, block, grid, grid_big
     global block_width, sc_w, sc_h, screen, asize
-    global t, agrid, apos, a, b, b1, c, d, pos
-    global dir_pos, font_size_small, font
+    global t, agrid, apos, a, b, b1, c, d, pos, block_big
+    global dir_pos, font_size_small, font, font_big
 
     arrow.empty()
 
@@ -191,6 +197,8 @@ def resize(set_row, set_screen):
     screen_size = set_screen
     block = int(screen_size / row)
     grid = int(block / 7)
+    grid_big = grid * 0.14
+    block_big = block + grid_big * 2
     block_width = block + grid
     sc_w = row * block_width + grid
     sc_h = sc_w + 2 * block
@@ -219,8 +227,15 @@ def resize(set_row, set_screen):
     ]
 
     font_size_small = int(screen_size / 20)
-    font = pygame.font.SysFont("comingsoon", font_size_small)
+    font_size_big = int(screen_size / 6)
+    font = pygame.font.SysFont(
+        "comingsoon", font_size_small
+    )
+    font_big = pygame.font.SysFont(
+        "comingsoon", font_size_big
+    )
     font.set_bold(True)
+    font_big.set_bold(True)
 
     all.empty()
     sprite_map.clear()
@@ -267,9 +282,10 @@ dx = [1, 0, -1, 0]
 dy = [0, 1, 0, -1]
 
 mouse_released, mouse_pressed = False, False
+any_keydown = False
 
-row, screen_size, block, grid = 4, 0, 0, 0
-block_width, sc_w, sc_h = 0, 0, 0
+row, screen_size, block, grid, grid_big = 4, 0, 0, 0, 0
+block_width, sc_w, sc_h, block_big = 0, 0, 0, 0
 
 asize, t, agrid, apos = 0, 0, 0, 0
 a, b, b1, c, d = 0, 0, 0, 0, 0
@@ -278,9 +294,11 @@ dir_pos = []
 board = [[0]*row for _ in range(row)]
 font_size_small = 0
 font = pygame.font.SysFont(None, 0)
+font_big = pygame.font.SysFont(None, 0)
 
 score = 0
 best_score = 0
+move_times = 0
 
 first_moved = False
 game_over = False
@@ -300,16 +318,24 @@ def get_tile_surface(value, color):
     if value in text_cache:
         return text_cache[value]
 
-    surf = pygame.Surface((block, block), pygame.SRCALPHA)
+    surf = pygame.Surface(
+        (block_big, block_big), pygame.SRCALPHA
+    )
     pygame.draw.rect(
-        surf, color, pygame.Rect(0, 0, block, block),
+        surf, color, pygame.Rect(
+            0, 0, block_big, block_big
+        ),
         border_radius=int(screen_size / 53)
     )
 
-    font_sm = pygame.font.SysFont("comingsoon", int(block * 0.5))
+    font_sm = pygame.font.SysFont("comingsoon", int(block_big * 0.5))
     font_sm.set_bold(True)
-    text = font_sm.render(str(value), True, (60, 58, 50))
-    text_rect = text.get_rect(center=(block / 2, block / 2))
+    text = font_sm.render(
+        str(value), True, (60, 58, 50)
+    )
+    text_rect = text.get_rect(
+        center=(block_big / 2, block_big / 2)
+    )
     surf.blit(text, text_rect)
 
     text_cache[value] = surf
@@ -428,7 +454,8 @@ def get_scan_order(step):
     else:
         return range(row)
 
-# part 2
+
+# =========== part 2 ===========
 def update_score_label(text, text1, kind):
     text = font.render(text, True, (151, 138, 118))
     text_sc = font.render(text1, True, (151, 138, 118))
@@ -498,7 +525,7 @@ def update_screen():
 
 def restart_game():
     global board, score, first_moved
-    global empty_positions
+    global empty_positions, move_times
 
     if first_moved:
         board = [[0]*row for _ in range(row)]
@@ -507,7 +534,10 @@ def restart_game():
         anim_list.clear()
         path_dict.clear()
         all.empty()
+
         score = 0
+        move_times = 0
+
         for _ in range(2):
             generate_block(True)
 
@@ -526,7 +556,8 @@ def save_data():
         "score": score,
         "best score": best_score,
         "screen_size": screen_size,
-        "first_moved": first_moved
+        "first_moved": first_moved,
+        "move_times": move_times
     }
 
     try:
@@ -541,7 +572,7 @@ def save_data():
 def load_data():
     file = get_save_path()
     global board, score, best_score, screen_size
-    global first_moved
+    global first_moved, move_times
 
     if os.path.exists(file) and os.path.getsize(file) > 0:
         with open(file, "r", encoding="utf-8") as f:
@@ -552,12 +583,14 @@ def load_data():
                 best_score = data.get("best score", 0)
                 screen_size = data.get("screen_size", 0)
                 first_moved = data.get("first_moved", 0)
+                move_times = data.get("move_times", 0)
             except json.JSONDecodeError:
                 board = [[0]*4 for _ in range(4)]
                 score = 0
                 best_score = 0
                 screen_size = 0
                 first_moved = False
+                move_times = 0
 
     else:
         board = [[0]*4 for _ in range(4)]
@@ -565,6 +598,7 @@ def load_data():
         best_score = 0
         screen_size = 0
         first_moved = False
+        move_times = 0
 
 
 def draw_resize_icon(center, size, color=(117, 100, 82)):
@@ -593,14 +627,26 @@ def draw_game_over_overlay():
     screen.blit(overlay, (0, 0))
 
     r2 = int(screen_size / 8)
-    reload_rect = pygame.Rect(sc_w / 2 - r2 / 2, sc_h / 1.8, r2, r2)
+    reload_rect = pygame.Rect(
+        sc_w / 2 - r2 / 2, sc_h / 1.8, r2, r2
+    )
+
+    s = pygame.Surface(
+        (r2 * 1.5, r2 * 1.5), pygame.SRCALPHA
+    )
+    pygame.draw.rect(
+        s, (0, 0, 0, 70), s.get_rect(),
+        border_radius=int(screen_size / 20)
+    )
+    s_rect = s.get_rect(center=reload_rect.center)
+    screen.blit(s, s_rect)
+
     draw_reload_icon(reload_rect.center, r2 / 2, (255, 255, 255))
 
-    keys = pygame.key.get_pressed()
     mouse_pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()[0]
     if (
-        keys[pygame.K_RETURN] or (
+        any_keydown or (
             reload_rect.collidepoint(mouse_pos) and
             mouse_click
         )
@@ -609,16 +655,20 @@ def draw_game_over_overlay():
         global game_over
         game_over = False
 
-    font_big = pygame.font.SysFont(
-        "comingsoon", int(screen_size / 7)
-    )
-    font_big.set_bold(True)
     text = font_big.render(
         "GAME OVER", True, (255, 255, 255)
     )
+    text_move = font.render(
+        f"this time u moved {move_times} times!",
+        True, (255, 255, 255)
+    )
     screen.blit(
         text, text.get_rect(
-            center=(sc_w / 2, sc_h / 2 - r2))
+            center=(sc_w / 2, sc_h / 2 - r2 * 1.3))
+    )
+    screen.blit(
+        text_move, text_move.get_rect(
+            center=(sc_w / 2, sc_h / 2.1 + r2 / 4))
     )
 
 
@@ -732,6 +782,7 @@ resize(4, s)
 
 while True:
     mouse_released, mouse_pressed = False, False
+    any_keydown = False
     clock.tick(60)
 
     for e in pygame.event.get():
@@ -740,6 +791,8 @@ while True:
             pygame.quit()
             sys.exit()
         elif e.type == pygame.KEYDOWN:
+            any_keydown = True
+
             if any_block_moving():
                 break
 
