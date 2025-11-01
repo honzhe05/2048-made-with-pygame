@@ -48,7 +48,7 @@ class block_body(pygame.sprite.Sprite):
         self.target_pos = pygame.Vector2(self.X, self.Y)
 
         self.move_progress = 1.0
-        self.move_speed = 0.45
+        self.move_speed = screen_size * 0.00085
 
         self.anim_size = int(block_big * 0.4)
         self.font_anim = screen_size / 704.2
