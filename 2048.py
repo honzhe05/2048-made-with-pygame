@@ -25,11 +25,16 @@ class block_body(pygame.sprite.Sprite):
         )
 
         font_sm = pygame.font.SysFont(
-            "comingsoon", int(block_big*0.5)
+            "comingsoon", int(block_big*0.45)
         )
         font_sm.set_bold(True)
+
+        if self.value >= 8:
+            text_color = (255, 255, 255)
+        else:
+            text_color = (117, 100, 82)
         text = font_sm.render(
-            str(self.value), True, (60, 58, 50)
+            str(self.value), True, text_color
         )
         text_rect = text.get_rect(
             center=(block_big/2, block_big/2)
@@ -43,10 +48,10 @@ class block_body(pygame.sprite.Sprite):
         self.target_pos = pygame.Vector2(self.X, self.Y)
 
         self.move_progress = 1.0
-        self.move_speed = 0.48
+        self.move_speed = 0.45
 
         self.anim_size = int(block_big * 0.4)
-        self.font_anim = 0.71
+        self.font_anim = screen_size / 704.2
 
         self.board_pos = (X, Y)
         sprite_map[(X, Y)] = self
@@ -71,7 +76,7 @@ class block_body(pygame.sprite.Sprite):
                 sprite2.color = color
                 sprite2.value = value
                 sprite2.anim_size = int(block_big * 0.4)
-                sprite2.font_anim = 0.71
+                sprite2.font_anim = screen_size / 704.2
                 sprite2.anim = True
                 sprite2.board_pos = (end[0], end[1])
                 empty_positions.append((start[0], start[1]))
@@ -119,7 +124,7 @@ class block_body(pygame.sprite.Sprite):
 
         if self.anim:
             if self.anim_size < block_big:
-                self.anim_size += 30
+                self.anim_size += screen_size / 16.7
                 if self.anim_size >= block_big:
                     self.anim_size = block_big
                     self.anim = False
@@ -199,7 +204,7 @@ def resize(set_row, set_screen):
     set_screen = set_screen * 28.2 / 33
     block = int(set_screen / row)
     grid = int(block / 7)
-    grid_big = grid * 0.14
+    grid_big = grid * 0.15
     block_big = block + grid_big * 2
     block_width = block + grid
     sc_w = row * block_width + grid
@@ -230,8 +235,8 @@ def resize(set_row, set_screen):
         (p - asize - agrid, apos)
     ]
 
-    font_size_small = int(screen_size / 18)
-    font_size_big = int(screen_size / 6)
+    font_size_small = int(screen_size / 20)
+    font_size_big = int(screen_size / 6.5)
     font = pygame.font.SysFont(
         "comingsoon", font_size_small
     )
@@ -332,10 +337,15 @@ def get_tile_surface(value, color):
         border_radius=int(screen_size / 53)
     )
 
-    font_sm = pygame.font.SysFont("comingsoon", int(block_big * 0.5))
+    font_sm = pygame.font.SysFont("comingsoon", int(block_big * 0.45))
     font_sm.set_bold(True)
+
+    if value >= 8:
+        text_color = (255, 255, 255)
+    else:
+        text_color = (117, 100, 82)
     text = font_sm.render(
-        str(value), True, (60, 58, 50)
+        str(value), True, text_color
     )
     text_rect = text.get_rect(
         center=(block_big / 2, block_big / 2)
@@ -633,7 +643,7 @@ def draw_game_over_overlay():
 
     r2 = int(screen_size / 8)
     reload_rect = pygame.Rect(
-        sc_w / 2 - r2 / 2, sc_h / 1.8, r2, r2
+        sc_w / 2 - r2 / 2, sc_h / 1.6, r2, r2
     )
 
     s = pygame.Surface(
@@ -710,9 +720,9 @@ def draw_grid():
 
 
 def choose_screen_size():
-    sizes = [360, 480, 500, 720, 1080, 1024]
+    sizes = [360, 480, 540, 720, 1080, 1024]
     word = [
-        "For mobile phones, we recommend 500px.",
+        "For mobile phones, we recommend 540px.",
         "For computers, 360 or 480px is ideal.",
         "If you want the ultimate experience and flawless smoothness,",
         "feel free to choose 1080 or even 1440px:)",
@@ -726,11 +736,11 @@ def choose_screen_size():
     btn_w, btn_h = 240, 100
     margin_x, margin_y = 100, 60
     screen = pygame.display.set_mode((720, 550))
+
     font = pygame.font.SysFont("cutivemono", 50)
     font.set_bold(True)
     font_small = pygame.font.SysFont("cutivemono", 17)
     font.set_bold(True)
-    last = pygame.time.get_ticks()
 
     while True:
         screen.fill((252, 248, 240))
@@ -741,7 +751,6 @@ def choose_screen_size():
             x = margin_x + col * (btn_w + spacing)
             y = margin_y + row * (btn_h + spacing)
             rect = pygame.Rect(x, y, btn_w, btn_h)
-            now = pygame.time.get_ticks()
 
             label = font.render(
                 f"{s} px", True, (60, 58, 50)
@@ -764,10 +773,7 @@ def choose_screen_size():
             mouse_pos = pygame.mouse.get_pos()
             if rect.collidepoint(mouse_pos):
                 pygame.draw.rect(screen, (200, 200, 200), rect, 2)
-                if (
-                    now - last > 300 and
-                    pygame.mouse.get_pressed()[0]
-                ):
+                if (pygame.mouse.get_pressed()[0]):
                     return s
             else:
                 pygame.draw.rect(screen, (180, 180, 180), rect, 1)
