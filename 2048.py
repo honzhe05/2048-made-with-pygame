@@ -193,7 +193,7 @@ def resize(set_row, set_screen):
 
     arrow.empty()
 
-    row = set_row
+    row = 4
     screen_size = set_screen
     block = int(screen_size / row)
     grid = int(block / 7)
@@ -208,6 +208,8 @@ def resize(set_row, set_screen):
     t = asize * 0.6
     agrid = asize / 10
     apos = sc_h + 2 * grid
+    p = sc_w / 2 + asize / 2 + agrid
+
     a = t / 2 * math.sqrt(3)
     b = (asize - a) / 2.0 + (asize / 50)
     b1 = (asize - a) / 2.0 - (asize / 50)
@@ -220,13 +222,13 @@ def resize(set_row, set_screen):
         [(c, a + b1), (t + c, a + b1), (d, b1)]
     ]
     dir_pos = [
-        (3 * asize + 2 * agrid, apos + asize + agrid),
-        (2 * asize + agrid, apos + asize + agrid),
-        (asize, apos + asize + agrid),
-        (2 * asize + agrid, apos)
+        (p, apos + asize + agrid),
+        (p - asize - agrid, apos + asize + agrid),
+        (p - 2 * asize - 2 * agrid, apos + asize + agrid),
+        (p - asize - agrid, apos)
     ]
 
-    font_size_small = int(screen_size / 20)
+    font_size_small = int(screen_size / 18)
     font_size_big = int(screen_size / 6)
     font = pygame.font.SysFont(
         "comingsoon", font_size_small
@@ -288,7 +290,7 @@ row, screen_size, block, grid, grid_big = 4, 0, 0, 0, 0
 block_width, sc_w, sc_h, block_big = 0, 0, 0, 0
 
 asize, t, agrid, apos = 0, 0, 0, 0
-a, b, b1, c, d = 0, 0, 0, 0, 0
+a, b, b1, c, d, p = 0, 0, 0, 0, 0, 0
 pos = []
 dir_pos = []
 board = [[0]*row for _ in range(row)]
@@ -462,19 +464,20 @@ def update_score_label(text, text1, kind):
     popup = pygame.Rect(
         grid + sc_w / 2 * kind, block * 1.3,
         sc_w / 2 - 2 * grid,
-        block / 2, border_radius=8
+        block / 2
     )
     pygame.draw.rect(
         screen, (233, 231, 217),
         popup, width=3 * kind,
-        border_radius=10
+        border_radius=int(screen_size / 30)
     )
     text_rect = text.get_rect()
     text_sc_rect = text_sc.get_rect()
 
-    text_rect.right = popup.right - 10
+    text_grid = screen_size / 30
+    text_rect.right = popup.right - text_grid
     text_rect.centery = popup.centery
-    text_sc_rect.left = popup.left + 10
+    text_sc_rect.left = popup.left + text_grid
     text_sc_rect.centery = popup.centery
 
     screen.blit(text, text_rect)
@@ -705,25 +708,31 @@ def draw_grid():
 
 
 def choose_screen_size():
-    sizes = [300, 400, 500, 600]
+    sizes = [360, 480, 500, 720, 1080, 1024]
     word = [
-         "For mobile phones, recommend 500px;",
-         "for computers, 300 or 400px."
-     ]
-    label_y = [270, 300]
+        "For mobile phones, we recommend 500px.",
+        "For computers, 360 or 480px is ideal.",
+        "If you want the ultimate experience and flawless smoothness,",
+        "feel free to choose 1080 or even 1440px:)",
+        "",
+        ""
+    ]
+
+    label_y = 380
     cols = 2
     spacing = 20
     btn_w, btn_h = 240, 100
-    margin_x, margin_y = 60, 60
-    screen = pygame.display.set_mode((620, 380))
+    margin_x, margin_y = 100, 60
+    screen = pygame.display.set_mode((720, 550))
     font = pygame.font.SysFont("cutivemono", 50)
     font.set_bold(True)
-    font_small = pygame.font.SysFont("cutivemono", 18)
+    font_small = pygame.font.SysFont("cutivemono", 17)
     font.set_bold(True)
     last = pygame.time.get_ticks()
 
     while True:
         screen.fill((252, 248, 240))
+
         for i, s in enumerate(sizes):
             row = i // cols
             col = i % cols
@@ -738,18 +747,17 @@ def choose_screen_size():
             label_rect = label.get_rect(center=rect.center)
             screen.blit(label, label_rect)
 
-            if i in [0, 1]:
-                rect1 = pygame.Rect(
-                    0, label_y[i], 620, 100
-                )
-                rect1.centerx = label_y[i] * 0.78 + 20 * i
-                label1 = font_small.render(
-                    word[i], True, (60, 58, 50)
-                )
-                label_rect1 = label.get_rect(
-                    center=rect1.center
-                )
-                screen.blit(label1, label_rect1)
+            rect1 = pygame.Rect(
+                0, label_y + i * 25, 720, 100
+            )
+            rect1.centerx = 360
+            label1 = font_small.render(
+                word[i], True, (60, 58, 50)
+            )
+            label_rect1 = label1.get_rect(
+                center=rect1.center
+            )
+            screen.blit(label1, label_rect1)
 
             mouse_pos = pygame.mouse.get_pos()
             if rect.collidepoint(mouse_pos):
