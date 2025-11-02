@@ -875,7 +875,7 @@ def draw_game_over_overlay():
 
 
 def choose_screen_size():
-    sizes = [360, 480, 540, 720, 1080, 1024]
+    sizes = [360, 480, 540, 720, 1080, 1440]
     word = [
         "For mobile phones, we recommend 540px.",
         "For computers, 360 or 480px is ideal.",
