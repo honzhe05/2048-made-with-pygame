@@ -5,6 +5,7 @@ import json
 import random
 import math
 from collections import deque
+from datetime import datetime
 
 
 # =========== part 1 ===========
@@ -84,6 +85,8 @@ class Block(pygame.sprite.Sprite):
             move_times += 1
             pending_new_tile = True
             save_data()
+        else:
+            check_death()
 
     def _merge_blocks(self, sprite, sprite2, start, end):
         del path_dict[start]
@@ -213,7 +216,7 @@ def resize(set_screen):
     global block_width, sc_w, sc_h, screen, asize
     global t, agrid, apos, a, b, b1, c, d, pos, block_big
     global dir_pos, font_size_small, font, font_big
-    global font_size_big
+    global font_size_big, font_arrow, text_arrow
 
     arrow.empty()
     all.empty()
@@ -270,8 +273,16 @@ def resize(set_screen):
     font_big = pygame.font.SysFont(
         font_style, font_size_big
     )
+    font_arrow = pygame.font.SysFont(
+        "arial", int(screen_size / 12)
+    )
+    font_arrow.set_bold(True)
     font.set_bold(True)
     font_big.set_bold(True)
+
+    text_arrow = font_arrow.render(
+        "<", True, (255, 255, 255)
+    )
 
     check_death()
     empty_positions.extend(  # redraw
@@ -309,6 +320,7 @@ any_keydown = False
 
 row, screen_size, block, grid, grid_big = 4, 0, 0, 0, 0
 block_width, sc_w, sc_h, block_big = 0, 0, 0, 0
+time = "None"
 
 asize, t, agrid, apos = 0, 0, 0, 0
 a, b, b1, c, d, p = 0, 0, 0, 0, 0, 0
@@ -317,6 +329,9 @@ pos, dir_pos = [], []
 font_size_small, font_size_big = 0, 0
 font = pygame.font.SysFont(None, 0)
 font_big = pygame.font.SysFont(None, 0)
+font_arrow = pygame.font.SysFont("arial", 0)
+font_arrow.set_bold(True)
+text_arrow = font.render("<", True, (255, 255, 255))
 font_style = "comingsoon"
 
 score, best_score = 0, 0
@@ -330,6 +345,7 @@ all = pygame.sprite.Group()
 arrow = pygame.sprite.Group()
 
 board = [[0]*row for _ in range(row)]
+board_prev = [[0]*row for _ in range(row)]
 empty_positions = [(x, y) for x in range(row) for y in range(row)]
 anim_list = deque()
 path_dict, sprite_map, text_cache = {}, {}, {}
@@ -417,8 +433,10 @@ def death():
 
 
 def moving(step):
-    global first_moved
+    global first_moved, board_prev
     first_moved = True
+
+    board_prev = [row[:] for row in board]
 
     q = deque()
     visited = [[False]*row for _ in range(row)]
@@ -531,6 +549,32 @@ def update_screen():
         sc_w * 0.05, block / 1.8, r2, r2
     )
     draw_resize_icon(resize_rect.center, r2)
+    undo_rect = pygame.Rect(
+        sc_w * 0.25, block / 2.4, r2 + 20, r2 + 20
+    )
+    pygame.draw.rect(
+        screen, (187, 171, 154), undo_rect,
+        border_radius=int(screen_size / 30)
+    )
+    draw_undo_arrow(
+        (undo_rect.x + 15, undo_rect.y + 15),
+        r2 * 0.8
+    )
+    undo_rect = pygame.Rect(
+        sc_w * 0.434, block / 2.4, r2 + 20, r2 + 20
+    )
+    pygame.draw.rect(
+        screen, (187, 171, 154), undo_rect,
+        border_radius=int(screen_size / 30)
+    )
+    undo_rect = pygame.Rect(
+        sc_w * 0.623, block / 2.4, r2 + 20, r2 + 20
+    )
+    pygame.draw.rect(
+        screen, (187, 171, 154), undo_rect,
+        border_radius=int(screen_size / 30)
+    )
+
     draw_grid()
 
     mouse_pos = pygame.mouse.get_pos()
@@ -548,14 +592,21 @@ def update_screen():
     ):
         s = choose_screen_size()
         resize(s)
+    elif (
+        undo_rect.collidepoint(mouse_pos) and
+        mouse_click and
+        not game_over
+    ):
+        pass
 
 
 def restart_game():
-    global board, score, first_moved
+    global board, score, first_moved, board_prev
     global empty_positions, move_times
 
     if first_moved:
         board = [[0]*row for _ in range(row)]
+        board_prev = [[0]*row for _ in range(row)]
         empty_positions = [(x, y) for x in range(row) for y in range(row)]
         sprite_map.clear()
         anim_list.clear()
@@ -577,8 +628,15 @@ def get_save_path(filename="2048_data.json"):
 
 
 def save_data():
+    global time
+
     file = get_save_path()
+    if not game_over:
+        n = datetime.now()
+        time = str(n.strftime("%Y-%m-%d %H:%M"))
     game_data = {
+        "save time": time,
+        "board_prev": board_prev,
         "board": board,
         "score": score,
         "best score": best_score,
@@ -599,12 +657,15 @@ def save_data():
 def load_data():
     file = get_save_path()
     global board, score, best_score, screen_size
-    global first_moved, move_times
+    global first_moved, move_times, time
+    global board_prev
 
     if os.path.exists(file) and os.path.getsize(file) > 0:
         with open(file, "r", encoding="utf-8") as f:
             try:
                 data = json.load(f)
+                time = data.get("save time", 0)
+                board_prev = data.get("board_prev", 0)
                 board = data.get("board", 0)
                 score = data.get("score", 0)
                 best_score = data.get("best score", 0)
@@ -612,20 +673,25 @@ def load_data():
                 first_moved = data.get("first_moved", 0)
                 move_times = data.get("move_times", 0)
             except json.JSONDecodeError:
-                board = [[0]*4 for _ in range(4)]
-                score = 0
-                best_score = 0
-                screen_size = 0
-                first_moved = False
-                move_times = 0
+                init_game_state()
 
     else:
-        board = [[0]*4 for _ in range(4)]
-        score = 0
-        best_score = 0
-        screen_size = 0
-        first_moved = False
-        move_times = 0
+        init_game_state()
+
+
+def init_game_state():
+    global board, score, best_score, screen_size
+    global first_moved, move_times, time
+    global board_prev
+
+    time = "None"
+    board_prev = [[0]*row for _ in range(row)]
+    board = [[0]*4 for _ in range(4)]
+    score = 0
+    best_score = 0
+    screen_size = 0
+    first_moved = False
+    move_times = 0
 
 
 def draw_resize_icon(center, size, color=(117, 100, 82)):
@@ -668,6 +734,28 @@ def draw_reload_icon(center, r, color=(117, 100, 82)):
             tip[1] + dy * 1.1 - 5
         )
         pygame.draw.line(screen, color, tip, end, line)
+
+
+def draw_undo_arrow(center, size, color=(255, 255, 255)):
+    x, y = center
+    x += 2
+    y += 2
+    r = size / 2
+    thickness = int(size / 10) + 2
+
+    rect = pygame.Rect(x + 2, y - thickness / 3, size, size)
+    pygame.draw.arc(
+        screen, color, rect, math.radians(270),
+        math.radians(100), thickness - 1
+    )
+    pygame.draw.line(
+        screen, color, (x + thickness, y), (x + r, y), thickness - 1
+    )
+    pygame.draw.line(
+        screen, color, (x + thickness, y + size - thickness * 0.7),
+        (x + r, y + size - thickness * 0.7), thickness + 1
+    )
+    screen.blit(text_arrow, (x - thickness / 2, y - size / 1.5))
 
 
 def draw_grid():
@@ -808,7 +896,8 @@ else:
     check_death()
 resize(s)
 
-while True:
+running = True
+while running:
     mouse_released, mouse_pressed = False, False
     any_keydown = False
     clock.tick(60)
@@ -816,8 +905,7 @@ while True:
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
             save_data()
-            pygame.quit()
-            sys.exit()
+            running = False
         elif e.type == pygame.KEYDOWN:
             any_keydown = True
 
@@ -853,8 +941,8 @@ while True:
     if pending_new_tile:
         generate_block(True)
         pending_new_tile = False
-    else:
-        check_death()
-        save_data()
 
     pygame.display.update()
+
+pygame.quit()
+sys.exit()
