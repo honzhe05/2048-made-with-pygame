@@ -339,7 +339,7 @@ move_times = 0
 
 first_moved = False
 game_over = False
-pending_new_tile = False
+pending_new_tile, undo_touch = False, False
 
 all = pygame.sprite.Group()
 arrow = pygame.sprite.Group()
@@ -433,8 +433,8 @@ def death():
 
 
 def moving(step):
-    global first_moved, board_prev
-    first_moved = True
+    global first_moved, board_prev, undo_touch
+    first_moved, undo_touch = True, True
 
     board_prev = [row[:] for row in board]
 
@@ -499,6 +499,33 @@ def get_scan_order(step):
         return range(row)
 
 
+def redraw_prev():
+    global board, undo_touch
+    board = [row[:] for row in board_prev]
+    undo_touch = False
+
+    all.empty()
+    sprite_map.clear()
+    anim_list.clear()
+    path_dict.clear()
+    empty_positions.clear()
+
+    empty_positions.extend(
+        (x, y) for x in range(row)
+        for y in range(row) if board[x][y] == 0
+    )
+
+    for i in range(row):
+        for j in range(row):
+            if board[i][j] != 0:
+                color = tile_colors.get(
+                    board[i][j], (60, 58, 50)
+                )
+                p1 = Block(color, i, j, board[i][j], False)
+                all.add(p1)
+                sprite_map[(i, j)] = p1
+
+
 # =========== part 2 ===========
 def update_score_label(text, text1, kind):
     text = font.render(text, True, (151, 138, 118))
@@ -527,7 +554,7 @@ def update_score_label(text, text1, kind):
 
 
 def update_screen():
-    global best_score
+    global best_score, undo_touch
 
     screen.fill((252, 248, 240))
 
@@ -552,26 +579,37 @@ def update_screen():
     undo_rect = pygame.Rect(
         sc_w * 0.25, block / 2.4, r2 + 20, r2 + 20
     )
+
+    if (
+        set(cell for row in board_prev for cell in row) == {0} or
+        not undo_touch
+    ):
+        color = (220, 213, 197)
+        undo_touch = False
+    else:
+        color = (187, 171, 154)
+        undo_touch = True
     pygame.draw.rect(
-        screen, (187, 171, 154), undo_rect,
+        screen, color, undo_rect,
         border_radius=int(screen_size / 30)
     )
     draw_undo_arrow(
         (undo_rect.x + 15, undo_rect.y + 15),
         r2 * 0.8
     )
-    undo_rect = pygame.Rect(
+
+    undo1_rect = pygame.Rect(
         sc_w * 0.434, block / 2.4, r2 + 20, r2 + 20
     )
     pygame.draw.rect(
-        screen, (187, 171, 154), undo_rect,
+        screen, (187, 171, 154), undo1_rect,
         border_radius=int(screen_size / 30)
     )
-    undo_rect = pygame.Rect(
-        sc_w * 0.623, block / 2.4, r2 + 20, r2 + 20
+    undo2_rect = pygame.Rect(
+        sc_w * 0.622, block / 2.4, r2 + 20, r2 + 20
     )
     pygame.draw.rect(
-        screen, (187, 171, 154), undo_rect,
+        screen, (187, 171, 154), undo2_rect,
         border_radius=int(screen_size / 30)
     )
 
@@ -595,9 +633,9 @@ def update_screen():
     elif (
         undo_rect.collidepoint(mouse_pos) and
         mouse_click and
-        not game_over
+        not game_over and undo_touch
     ):
-        pass
+        redraw_prev()
 
 
 def restart_game():
@@ -638,6 +676,7 @@ def save_data():
         "save time": time,
         "board_prev": board_prev,
         "board": board,
+        "undo_touch": undo_touch,
         "score": score,
         "best score": best_score,
         "screen_size": screen_size,
@@ -658,7 +697,7 @@ def load_data():
     file = get_save_path()
     global board, score, best_score, screen_size
     global first_moved, move_times, time
-    global board_prev
+    global board_prev, undo_touch
 
     if os.path.exists(file) and os.path.getsize(file) > 0:
         with open(file, "r", encoding="utf-8") as f:
@@ -667,6 +706,7 @@ def load_data():
                 time = data.get("save time", 0)
                 board_prev = data.get("board_prev", 0)
                 board = data.get("board", 0)
+                undo_touch = data.get("undo_touch", 0)
                 score = data.get("score", 0)
                 best_score = data.get("best score", 0)
                 screen_size = data.get("screen_size", 0)
@@ -682,11 +722,12 @@ def load_data():
 def init_game_state():
     global board, score, best_score, screen_size
     global first_moved, move_times, time
-    global board_prev
+    global board_prev, undo_touch
 
     time = "None"
     board_prev = [[0]*row for _ in range(row)]
     board = [[0]*4 for _ in range(4)]
+    undo_touch = False
     score = 0
     best_score = 0
     screen_size = 0
