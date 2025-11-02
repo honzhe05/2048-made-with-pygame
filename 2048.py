@@ -17,7 +17,7 @@ class Block(pygame.sprite.Sprite):
         self.anim = anim
 
         self.X = grid - grid_big + x * block_width
-        self.Y = block_width + block - grid_big + y * block_width
+        self.Y = 2 * block_width - grid_big + grid + y * block_width
         self.start_pos = pygame.Vector2(self.X, self.Y)
         self.target_pos = pygame.Vector2(self.X, self.Y)
         self.move_progress = 1.0
@@ -113,7 +113,7 @@ class Block(pygame.sprite.Sprite):
         board[end[0]][end[1]] = sprite.value
 
         target_x = grid - grid_big + end[0] * block_width
-        target_y = block_width + block - grid_big + end[1] * block_width
+        target_y = 2 * block_width - grid_big + grid + end[1] * block_width
 
         sprite.board_pos = end
         sprite.prev_X = sprite.X
@@ -235,7 +235,7 @@ def resize(set_screen):
     block_big = block + grid_big * 2
     block_width = block + grid
     sc_w = row * block_width + grid
-    sc_h = sc_w + 2 * block
+    sc_h = sc_w + 2 * block_width
     screen = pygame.display.set_mode((sc_w, sc_h))
 
     asize = screen_size / 5  # arrow buttons
@@ -528,10 +528,11 @@ def redraw_prev():
 
 # =========== part 2 ===========
 def update_score_label(text, text1, kind):
-    text = font.render(text, True, (151, 138, 118))
-    text_sc = font.render(text1, True, (151, 138, 118))
+    color = (151, 138, 118)
+    text = font.render(text, True, color)
+    text_sc = font.render(text1, True, color)
     popup = pygame.Rect(
-        grid + sc_w / 2 * kind, block * 1.3,
+        grid + sc_w / 2 * kind, block_width * 1.36,
         sc_w / 2 - 2 * grid,
         block / 2
     )
@@ -556,9 +557,20 @@ def update_score_label(text, text1, kind):
 def update_screen():
     global best_score, undo_touch
 
-    screen.fill((252, 248, 240))
+    screen.fill((243, 239, 229))
+    pygame.draw.rect(
+        screen, (252, 248, 240),
+        (0, grid, sc_w, sc_h - grid)
+    )
+    
+    rx = screen_size / 4.5
+    rect_p = pygame.Rect(rx, 2 * grid, screen_size / 1.8, rx)
+    pygame.draw.rect(
+        screen, (232, 230, 216), rect_p,
+        border_radius=int(screen_size / 20)
+    )
 
-    rect = pygame.Rect(0, 2 * block, sc_w, sc_w)
+    rect = pygame.Rect(0, 2 * block_width, sc_w, sc_w)
     pygame.draw.rect(
         screen, background, rect,
         border_radius=int(screen_size / 16)
@@ -568,16 +580,17 @@ def update_screen():
     update_score_label(f"{best_score}", "BEST", 1)
 
     r2 = int(screen_size / 11)
+    r3 = r2 + int(screen_size / 27)
     reload_rect = pygame.Rect(
-        sc_w * 0.85, block / 1.8, r2, r2
+        sc_w * 0.85, block / 1.5, r2, r2
     )
     draw_reload_icon(reload_rect.center, r2 / 2)
     resize_rect = pygame.Rect(
-        sc_w * 0.05, block / 1.8, r2, r2
+        sc_w * 0.05, block / 1.5, r2, r2
     )
     draw_resize_icon(resize_rect.center, r2)
     undo_rect = pygame.Rect(
-        sc_w * 0.25, block / 2.4, r2 + 20, r2 + 20
+        sc_w * 0.25, block / 2.4, r3, r3
     )
 
     if (
@@ -593,20 +606,21 @@ def update_screen():
         screen, color, undo_rect,
         border_radius=int(screen_size / 30)
     )
+    px = screen_size / 36
     draw_undo_arrow(
-        (undo_rect.x + 15, undo_rect.y + 15),
+        (undo_rect.x + px, undo_rect.y + px),
         r2 * 0.8
     )
 
     undo1_rect = pygame.Rect(
-        sc_w * 0.434, block / 2.4, r2 + 20, r2 + 20
+        sc_w * 0.434, block / 2.4, r3, r3
     )
     pygame.draw.rect(
         screen, (187, 171, 154), undo1_rect,
         border_radius=int(screen_size / 30)
     )
     undo2_rect = pygame.Rect(
-        sc_w * 0.622, block / 2.4, r2 + 20, r2 + 20
+        sc_w * 0.622, block / 2.4, r3, r3
     )
     pygame.draw.rect(
         screen, (187, 171, 154), undo2_rect,
@@ -800,7 +814,7 @@ def draw_undo_arrow(center, size, color=(255, 255, 255)):
 
 
 def draw_grid():
-    for i in range(block_width + block, sc_h - grid, block_width):
+    for i in range(2 * block_width + grid, sc_h - grid, block_width):
         for j in range(grid, sc_w - grid, block_width):
             rect_block = pygame.Rect(j, i, block, block)
             pygame.draw.rect(
