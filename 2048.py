@@ -8,142 +8,159 @@ from collections import deque
 
 
 # =========== part 1 ===========
-class block_body(pygame.sprite.Sprite):
-    def __init__(self, Color, X, Y, Value, anim):
-        pygame.sprite.Sprite.__init__(self)
-
+class Block(pygame.sprite.Sprite):
+    def __init__(self, color, x, y, value, anim):
+        super().__init__()
+        self.color = color
+        self.value = value
         self.anim = anim
-        self.color = Color
-        self.value = Value
 
-        self.base_image = get_tile_surface(self.value, self.color)
-        self.image = self.base_image.copy()
-        pygame.draw.rect(
-            self.base_image, self.color,
-            pygame.Rect(0, 0, block_big, block_big),
-            border_radius=int(screen_size / 53)
-        )
-
-        font_sm = pygame.font.SysFont(
-            "comingsoon", int(block_big*0.45)
-        )
-        font_sm.set_bold(True)
-
-        if self.value >= 8:
-            text_color = (255, 255, 255)
-        else:
-            text_color = (117, 100, 82)
-        text = font_sm.render(
-            str(self.value), True, text_color
-        )
-        text_rect = text.get_rect(
-            center=(block_big/2, block_big/2)
-        )
-        self.base_image.blit(text, text_rect)
-
-        self.rect = self.base_image.get_rect()
-        self.X = grid - grid_big + X * block_width
-        self.Y = block_width + block - grid_big + Y * block_width
+        self.X = grid - grid_big + x * block_width
+        self.Y = block_width + block - grid_big + y * block_width
         self.start_pos = pygame.Vector2(self.X, self.Y)
         self.target_pos = pygame.Vector2(self.X, self.Y)
-
         self.move_progress = 1.0
         self.move_speed = screen_size * 0.00085
+        self.board_pos = (x, y)
 
         self.anim_size = int(block_big * 0.4)
         self.font_anim = screen_size / 704.2
 
-        self.board_pos = (X, Y)
-        sprite_map[(X, Y)] = self
+        self.base_image = self._make_tile_surface()
+        self.image = self.base_image.copy()
+        self.rect = self.image.get_rect(topleft=(self.X, self.Y))
+
+        sprite_map[(x, y)] = self
+
+    def _make_tile_surface(self):
+        surf = get_tile_surface(self.value, self.color)
+        pygame.draw.rect(
+            surf, self.color,
+            pygame.Rect(0, 0, block_big, block_big),
+            border_radius=int(screen_size / 53)
+        )
+
+        font = pygame.font.SysFont(
+            font_style, int(block_big * 0.45)
+        )
+        font.set_bold(True)
+
+        text_color = (255, 255, 255) if self.value >= 8 else (117, 100, 82)
+        text = font.render(str(self.value), True, text_color)
+        text_rect = text.get_rect(
+            center=(block_big / 2, block_big / 2)
+        )
+        surf.blit(text, text_rect)
+        return surf
 
     def update(self):
-        moved = False
+        self._process_path_moves()
+        self._update_position()
+        self._update_animation()
 
+    def _process_path_moves(self):
+        global pending_new_tile, move_times
+
+        moved = False
         for start, end in list(path_dict.items()):
             sprite = find_sprite_at(*start)
             sprite2 = find_sprite_at(*end)
+
             if sprite is None:
                 del path_dict[start]
                 continue
+
             if sprite2:
-                del path_dict[start]
-                value = sprite2.value * 2
-                color = tile_colors.get(value, (60, 58, 50))
-
-                sprite.kill()
-                all.remove(sprite)
-                board[end[0]][end[1]] = value
-                sprite2.color = color
-                sprite2.value = value
-                sprite2.anim_size = int(block_big * 0.4)
-                sprite2.font_anim = screen_size / 704.2
-                sprite2.anim = True
-                sprite2.board_pos = (end[0], end[1])
-                empty_positions.append((start[0], start[1]))
-                sprite2.base_image = get_tile_surface(
-                    sprite2.value, sprite2.color
+                self._merge_blocks(
+                    sprite, sprite2, start, end
                 )
-
-                del sprite_map[(start[0], start[1])]
-                sprite_map[(end[0], end[1])] = sprite2
                 moved = True
                 continue
 
-            board[start[0]][start[1]] = 0
-            board[end[0]][end[1]] = sprite.value
-            tpx = grid - grid_big + end[0] * block_width
-            tpy = block_width + block - grid_big + end[1] * block_width
-            sprite.board_pos = (end[0], end[1])
-            sprite.prev_X = sprite.X
-            sprite.prev_Y = sprite.Y
-            sprite.move_to(tpx, tpy)
-            del sprite_map[(start[0], start[1])]
-            sprite_map[(end[0], end[1])] = sprite
-
-            empty_positions.append((start[0], start[1]))
-            empty_positions.remove((end[0], end[1]))
+            self._move_block(sprite, start, end)
             moved = True
 
-            del path_dict[start]
-
         if moved:
-            global pending_new_tile, move_times
             move_times += 1
             pending_new_tile = True
             save_data()
 
+    def _merge_blocks(self, sprite, sprite2, start, end):
+        del path_dict[start]
+        value = sprite2.value * 2
+        color = tile_colors.get(value, (60, 58, 50))
+
+        sprite.kill()
+        all.remove(sprite)
+        board[end[0]][end[1]] = value
+        sprite2.color = color
+        sprite2.value = value
+        sprite2.anim_size = int(block_big * 0.4)
+        sprite2.font_anim = screen_size / 704.2
+        sprite2.anim = True
+        sprite2.board_pos = end
+        empty_positions.append(start)
+
+        sprite2.base_image = get_tile_surface(value, color)
+        del sprite_map[start]
+        sprite_map[end] = sprite2
+
+    def _move_block(self, sprite, start, end):
+        board[start[0]][start[1]] = 0
+        board[end[0]][end[1]] = sprite.value
+
+        target_x = grid - grid_big + end[0] * block_width
+        target_y = block_width + block - grid_big + end[1] * block_width
+
+        sprite.board_pos = end
+        sprite.prev_X = sprite.X
+        sprite.prev_Y = sprite.Y
+        sprite.move_to(target_x, target_y)
+
+        del sprite_map[start]
+        sprite_map[end] = sprite
+
+        empty_positions.append(start)
+        if end in empty_positions:
+            empty_positions.remove(end)
+
+        del path_dict[start]
+
+    def _update_position(self):
         if self.move_progress < 1.0:
             self.move_progress += self.move_speed
             if self.move_progress > 1.0:
                 self.move_progress = 1.0
-            now_pos = self.start_pos.lerp(self.target_pos, self.move_progress)
+            pos = self.start_pos.lerp(
+                self.target_pos, self.move_progress
+            )
         else:
-            now_pos = self.target_pos
+            pos = self.target_pos
 
-        self.X, self.Y = now_pos.x, now_pos.y
+        self.X, self.Y = pos.x, pos.y
 
+    def _update_animation(self):
         if self.anim:
             if self.anim_size < block_big:
                 self.anim_size += screen_size / 16.7
                 if self.anim_size >= block_big:
                     self.anim_size = block_big
                     self.anim = False
+
             scaled_image = pygame.transform.smoothscale(
                 self.base_image,
                 (self.anim_size, self.anim_size)
             )
             self.image = scaled_image
-            self.rect = self.image.get_rect(
-                center=(
-                    self.X + block_big / 2,
-                    self.Y + block_big / 2
-                )
-            )
+            self.rect = self.image.get_rect(center=(
+                self.X + block_big / 2,
+                self.Y + block_big / 2
+            ))
         else:
             self.image = self.base_image
-            self.rect = self.image.get_rect(
-                topleft=(self.X, self.Y)
-            )
+            self.rect = self.image.get_rect(topleft=(
+                self.X, self.Y
+            ))
 
     def move_to(self, new_x, new_y):
         self.start_pos = pygame.Vector2(self.X, self.Y)
@@ -191,15 +208,22 @@ def find_sprite_at(board_x, board_y):
     return sprite_map.get((board_x, board_y))
 
 
-def resize(set_row, set_screen):
+def resize(set_screen):
     global row, screen_size, block, grid, grid_big
     global block_width, sc_w, sc_h, screen, asize
     global t, agrid, apos, a, b, b1, c, d, pos, block_big
     global dir_pos, font_size_small, font, font_big
+    global font_size_big
 
     arrow.empty()
+    all.empty()
+    sprite_map.clear()
+    anim_list.clear()
+    path_dict.clear()
+    empty_positions.clear()
+    text_cache.clear()
 
-    row = 4
+    row = 4  # screen and block
     screen_size = set_screen
     set_screen = set_screen * 28.2 / 33
     block = int(set_screen / row)
@@ -211,7 +235,7 @@ def resize(set_row, set_screen):
     sc_h = sc_w + 2 * block
     screen = pygame.display.set_mode((sc_w, sc_h))
 
-    asize = screen_size / 5
+    asize = screen_size / 5  # arrow buttons
     t = asize * 0.6
     agrid = asize / 10
     apos = sc_h + 2 * grid
@@ -234,26 +258,23 @@ def resize(set_row, set_screen):
         (p - 2 * asize - 2 * agrid, apos + asize + agrid),
         (p - asize - agrid, apos)
     ]
+    for i in range(4):
+        p2 = arrow_keys(i)
+        arrow.add(p2)
 
-    font_size_small = int(screen_size / 20)
+    font_size_small = int(screen_size / 20)  # fonts
     font_size_big = int(screen_size / 6.5)
     font = pygame.font.SysFont(
-        "comingsoon", font_size_small
+        font_style, font_size_small
     )
     font_big = pygame.font.SysFont(
-        "comingsoon", font_size_big
+        font_style, font_size_big
     )
     font.set_bold(True)
     font_big.set_bold(True)
 
-    all.empty()
-    sprite_map.clear()
-    anim_list.clear()
-    path_dict.clear()
-    empty_positions.clear()
-    text_cache.clear()
-
-    empty_positions.extend(
+    check_death()
+    empty_positions.extend(  # redraw
         (x, y) for x in range(row)
         for y in range(row) if board[x][y] == 0
     )
@@ -261,29 +282,22 @@ def resize(set_row, set_screen):
     for i in range(row):
         for j in range(row):
             if board[i][j] != 0:
-                color = tile_colors.get(board[i][j], (60, 58, 50))
-                p1 = block_body(color, i, j, board[i][j], False)
+                color = tile_colors.get(
+                    board[i][j], (60, 58, 50)
+                )
+                p1 = Block(color, i, j, board[i][j], False)
                 all.add(p1)
                 sprite_map[(i, j)] = p1
-
-    for i in range(4):
-        p2 = arrow_keys(i)
-        arrow.add(p2)
 
 
 background = (155, 135, 118)
 block_back = (189, 172, 152)
 tile_colors = {
-    2: (238, 228, 218),
-    4: (237, 224, 200),
-    8: (242, 177, 121),
-    16: (245, 149, 99),
-    32: (246, 124, 95),
-    64: (246, 94, 59),
-    128: (237, 207, 114),
-    256: (237, 204, 97),
-    512: (237, 200, 80),
-    1024: (237, 197, 63),
+    2: (238, 228, 218), 4: (237, 224, 200),
+    8: (242, 177, 121), 16: (245, 149, 99),
+    32: (246, 124, 95), 64: (246, 94, 59),
+    128: (237, 207, 114), 256: (237, 204, 97),
+    512: (237, 200, 80), 1024: (237, 197, 63),
     2048: (237, 194, 46),
 }
 
@@ -298,15 +312,14 @@ block_width, sc_w, sc_h, block_big = 0, 0, 0, 0
 
 asize, t, agrid, apos = 0, 0, 0, 0
 a, b, b1, c, d, p = 0, 0, 0, 0, 0, 0
-pos = []
-dir_pos = []
-board = [[0]*row for _ in range(row)]
-font_size_small = 0
+pos, dir_pos = [], []
+
+font_size_small, font_size_big = 0, 0
 font = pygame.font.SysFont(None, 0)
 font_big = pygame.font.SysFont(None, 0)
+font_style = "comingsoon"
 
-score = 0
-best_score = 0
+score, best_score = 0, 0
 move_times = 0
 
 first_moved = False
@@ -316,11 +329,10 @@ pending_new_tile = False
 all = pygame.sprite.Group()
 arrow = pygame.sprite.Group()
 
+board = [[0]*row for _ in range(row)]
 empty_positions = [(x, y) for x in range(row) for y in range(row)]
 anim_list = deque()
-path_dict = {}
-sprite_map = {}
-text_cache = {}
+path_dict, sprite_map, text_cache = {}, {}, {}
 
 
 def get_tile_surface(value, color):
@@ -337,7 +349,7 @@ def get_tile_surface(value, color):
         border_radius=int(screen_size / 53)
     )
 
-    font_sm = pygame.font.SysFont("comingsoon", int(block_big * 0.45))
+    font_sm = pygame.font.SysFont(font_style, int(block_big * 0.45))
     font_sm.set_bold(True)
 
     if value >= 8:
@@ -365,14 +377,14 @@ def generate_block(anim=False):
     color = tile_colors.get(num, (60, 58, 50))
 
     if find_sprite_at(x, y) is None:
-        p1 = block_body(color, x, y, num, anim)
+        p1 = Block(color, x, y, num, anim)
         all.add(p1)
         anim_list.append((x, y))
 
 
 def any_block_moving():
     for sprite in all:
-        if isinstance(sprite, block_body) and sprite.move_progress < 1.0:
+        if isinstance(sprite, Block) and sprite.move_progress < 1.0:
             return True
 
     return False
@@ -535,7 +547,7 @@ def update_screen():
         not game_over
     ):
         s = choose_screen_size()
-        resize(4, s)
+        resize(s)
 
 
 def restart_game():
@@ -636,6 +648,38 @@ def draw_resize_icon(center, size, color=(117, 100, 82)):
     pygame.draw.line(screen, color, (bx + 8, by), (bx, by + 8), line)
 
 
+def draw_reload_icon(center, r, color=(117, 100, 82)):
+    arc = pygame.Rect(0, 0, r * 2, r * 2)
+    arc.center = center
+    line = int(screen_size / 100)
+    a1, a2 = math.radians(30), math.radians(330)
+    pygame.draw.arc(screen, color, arc, a1, a2, line)
+
+    tip = (
+        center[0] + r * math.cos(a2),
+        center[1] + r * math.sin(a2)
+    )
+    for s in [-1, 1]:
+        a = a2 + s * math.radians(75)
+        dx = r * 0.25 * math.cos(a)
+        dy = r * 0.25 * math.sin(a)
+        end = (
+            tip[0] - dx * 1.5 - 5,
+            tip[1] + dy * 1.1 - 5
+        )
+        pygame.draw.line(screen, color, tip, end, line)
+
+
+def draw_grid():
+    for i in range(block_width + block, sc_h - grid, block_width):
+        for j in range(grid, sc_w - grid, block_width):
+            rect_block = pygame.Rect(j, i, block, block)
+            pygame.draw.rect(
+                screen, block_back, rect_block,
+                border_radius=int(screen_size / 53)
+            )
+
+
 def draw_game_over_overlay():
     overlay = pygame.Surface((sc_w, sc_h), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 100))
@@ -685,38 +729,6 @@ def draw_game_over_overlay():
         text_move, text_move.get_rect(
             center=(sc_w / 2, sc_h / 2.1 + r2 / 4))
     )
-
-
-def draw_reload_icon(center, r, color=(117, 100, 82)):
-    arc = pygame.Rect(0, 0, r * 2, r * 2)
-    arc.center = center
-    line = int(screen_size / 100)
-    a1, a2 = math.radians(30), math.radians(330)
-    pygame.draw.arc(screen, color, arc, a1, a2, line)
-
-    tip = (
-        center[0] + r * math.cos(a2),
-        center[1] + r * math.sin(a2)
-    )
-    for s in [-1, 1]:
-        a = a2 + s * math.radians(75)
-        dx = r * 0.25 * math.cos(a)
-        dy = r * 0.25 * math.sin(a)
-        end = (
-            tip[0] - dx * 1.5 - 5,
-            tip[1] + dy * 1.1 - 5
-        )
-        pygame.draw.line(screen, color, tip, end, line)
-
-
-def draw_grid():
-    for i in range(block_width + block, sc_h - grid, block_width):
-        for j in range(grid, sc_w - grid, block_width):
-            rect_block = pygame.Rect(j, i, block, block)
-            pygame.draw.rect(
-                screen, block_back, rect_block,
-                border_radius=int(screen_size / 53)
-            )
 
 
 def choose_screen_size():
@@ -794,7 +806,7 @@ if screen_size == 0:
 else:
     s = screen_size
     check_death()
-resize(4, s)
+resize(s)
 
 while True:
     mouse_released, mouse_pressed = False, False
