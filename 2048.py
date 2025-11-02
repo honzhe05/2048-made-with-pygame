@@ -286,12 +286,12 @@ def resize(set_screen):
 
     check_death()
     empty_positions.extend(  # redraw
-        (x, y) for x in range(row)
-        for y in range(row) if board[x][y] == 0
+        (x, y) for x in range(4)
+        for y in range(4) if board[x][y] == 0
     )
 
-    for i in range(row):
-        for j in range(row):
+    for i in range(4):
+        for j in range(4):
             if board[i][j] != 0:
                 color = tile_colors.get(
                     board[i][j], (60, 58, 50)
@@ -334,19 +334,17 @@ font_arrow.set_bold(True)
 text_arrow = font.render("<", True, (255, 255, 255))
 font_style = "comingsoon"
 
-score, best_score = 0, 0
-move_times = 0
+score, best_score, move_times = 0, 0, 0
 
-first_moved = False
-game_over = False
+first_moved, game_over = False, False
 pending_new_tile, undo_touch = False, False
 
 all = pygame.sprite.Group()
 arrow = pygame.sprite.Group()
 
-board = [[0]*row for _ in range(row)]
-board_prev = [[0]*row for _ in range(row)]
-empty_positions = [(x, y) for x in range(row) for y in range(row)]
+board = [[0]*4 for _ in range(4)]
+board_prev = [[0]*4 for _ in range(4)]
+empty_positions = [(x, y) for x in range(4) for y in range(4)]
 anim_list = deque()
 path_dict, sprite_map, text_cache = {}, {}, {}
 
@@ -361,8 +359,7 @@ def get_tile_surface(value, color):
     pygame.draw.rect(
         surf, color, pygame.Rect(
             0, 0, block_big, block_big
-        ),
-        border_radius=int(screen_size / 53)
+        ), border_radius=int(screen_size / 53)
     )
 
     font_sm = pygame.font.SysFont(font_style, int(block_big * 0.45))
@@ -409,8 +406,8 @@ def any_block_moving():
 def check_death():
     place = False
 
-    for x in range(row):
-        for y in range(row):
+    for x in range(4):
+        for y in range(4):
             if board[x][y] == 0:
                 place = True
 
@@ -421,8 +418,8 @@ def check_death():
 def death():
     global game_over
 
-    for i in range(row):
-        for j in range(row):
+    for i in range(4):
+        for j in range(4):
             for k in range(4):
                 x, y = i + dx[k], j + dy[k]
                 if 0 <= x < row and 0 <= y < row:
@@ -437,12 +434,11 @@ def moving(step):
     first_moved, undo_touch = True, True
 
     board_prev = [row[:] for row in board]
-
     q = deque()
-    visited = [[False]*row for _ in range(row)]
+    visited = [[False]*4 for _ in range(4)]
 
     for i in get_scan_order(step):
-        for j in range(row):
+        for j in range(4):
             x, y = (i, j) if step in [0, 2] else (j, i)
             if board[x][y] != 0:
                 q.append((x, y))
@@ -450,6 +446,8 @@ def moving(step):
     while q:
         x, y = q.popleft()
         nx, ny = x + dx[step], y + dy[step]
+        start, end = (x, y), (nx, ny)
+        find = False
         global score
 
         if 0 <= nx < row and 0 <= ny < row:
@@ -457,9 +455,6 @@ def moving(step):
                 board[nx][ny] = board[x][y]
                 board[x][y] = 0
 
-                start = (x, y)
-                end = (nx, ny)
-                find = False
                 for k, v in path_dict.items():
                     if v == start:
                         path_dict[k] = end
@@ -477,9 +472,6 @@ def moving(step):
                 board[nx][ny] *= 2
                 board[x][y] = 0
 
-                start = (x, y)
-                end = (nx, ny)
-                find = False
                 for k, v in path_dict.items():
                     if v == start:
                         path_dict[k] = end
@@ -494,9 +486,9 @@ def moving(step):
 
 def get_scan_order(step):
     if step in [0, 1]:
-        return range(row-1, -1, -1)
+        return range(3, -1, -1)
     else:
-        return range(row)
+        return range(4)
 
 
 def redraw_prev():
@@ -511,12 +503,12 @@ def redraw_prev():
     empty_positions.clear()
 
     empty_positions.extend(
-        (x, y) for x in range(row)
-        for y in range(row) if board[x][y] == 0
+        (x, y) for x in range(4)
+        for y in range(4) if board[x][y] == 0
     )
 
-    for i in range(row):
-        for j in range(row):
+    for i in range(4):
+        for j in range(4):
             if board[i][j] != 0:
                 color = tile_colors.get(
                     board[i][j], (60, 58, 50)
@@ -533,8 +525,7 @@ def update_score_label(text, text1, kind):
     text_sc = font.render(text1, True, color)
     popup = pygame.Rect(
         grid + sc_w / 2 * kind, block_width * 1.36,
-        sc_w / 2 - 2 * grid,
-        block / 2
+        sc_w / 2 - 2 * grid, block / 2
     )
     pygame.draw.rect(
         screen, (233, 231, 217),
@@ -562,7 +553,7 @@ def update_screen():
         screen, (252, 248, 240),
         (0, grid, sc_w, sc_h - grid)
     )
-    
+
     rx = screen_size / 4.5
     rect_p = pygame.Rect(rx, 2 * grid, screen_size / 1.8, rx)
     pygame.draw.rect(
@@ -594,7 +585,7 @@ def update_screen():
     )
 
     if (
-        set(cell for row in board_prev for cell in row) == {0} or
+        set(c for r in board_prev for c in r) == {0} or
         not undo_touch
     ):
         color = (220, 213, 197)
@@ -608,8 +599,7 @@ def update_screen():
     )
     px = screen_size / 36
     draw_undo_arrow(
-        (undo_rect.x + px, undo_rect.y + px),
-        r2 * 0.8
+        (undo_rect.x + px, undo_rect.y + px), r2 * 0.8
     )
 
     undo1_rect = pygame.Rect(
@@ -633,21 +623,19 @@ def update_screen():
     mouse_click = pygame.mouse.get_pressed()[0]
     if (
         reload_rect.collidepoint(mouse_pos) and
-        mouse_click and
-        not game_over
+        mouse_click and not game_over
     ):
         restart_game()
     elif (
         resize_rect.collidepoint(mouse_pos) and
-        mouse_click and
-        not game_over
+        mouse_click and not game_over
     ):
         s = choose_screen_size()
         resize(s)
     elif (
         undo_rect.collidepoint(mouse_pos) and
-        mouse_click and
-        not game_over and undo_touch
+        mouse_click and not game_over and
+        undo_touch
     ):
         redraw_prev()
 
@@ -657,16 +645,15 @@ def restart_game():
     global empty_positions, move_times
 
     if first_moved:
-        board = [[0]*row for _ in range(row)]
-        board_prev = [[0]*row for _ in range(row)]
-        empty_positions = [(x, y) for x in range(row) for y in range(row)]
+        board = [[0]*4 for _ in range(4)]
+        board_prev = [[0]*4 for _ in range(4)]
+        empty_positions = [(x, y) for x in range(4) for y in range(4)]
         sprite_map.clear()
         anim_list.clear()
         path_dict.clear()
         all.empty()
 
-        score = 0
-        move_times = 0
+        score, move_times = 0, 0
 
         for _ in range(2):
             generate_block(True)
@@ -739,12 +726,10 @@ def init_game_state():
     global board_prev, undo_touch
 
     time = "None"
-    board_prev = [[0]*row for _ in range(row)]
+    board_prev = [[0]*4 for _ in range(4)]
     board = [[0]*4 for _ in range(4)]
     undo_touch = False
-    score = 0
-    best_score = 0
-    screen_size = 0
+    score, best_score, screen_size = 0, 0, 0
     first_moved = False
     move_times = 0
 
@@ -881,12 +866,10 @@ def choose_screen_size():
         "For computers, 360 or 480px is ideal.",
         "If you want the ultimate experience and flawless smoothness,",
         "feel free to choose 1080 or even 1440px:)",
-        "",
-        ""
+        "", ""
     ]
 
     label_y = 380
-    cols = 2
     spacing = 20
     btn_w, btn_h = 240, 100
     margin_x, margin_y = 100, 60
@@ -901,8 +884,8 @@ def choose_screen_size():
         screen.fill((252, 248, 240))
 
         for i, s in enumerate(sizes):
-            row = i // cols
-            col = i % cols
+            row = i // 2
+            col = i % 2
             x = margin_x + col * (btn_w + spacing)
             y = margin_y + row * (btn_h + spacing)
             rect = pygame.Rect(x, y, btn_w, btn_h)
@@ -928,7 +911,7 @@ def choose_screen_size():
             mouse_pos = pygame.mouse.get_pos()
             if rect.collidepoint(mouse_pos):
                 pygame.draw.rect(screen, (200, 200, 200), rect, 2)
-                if (pygame.mouse.get_pressed()[0]):
+                if pygame.mouse.get_pressed()[0]:
                     return s
             else:
                 pygame.draw.rect(screen, (180, 180, 180), rect, 1)
@@ -942,7 +925,7 @@ def choose_screen_size():
 
 
 load_data()
-if screen_size == 0:
+if not screen_size:
     s = choose_screen_size()
     for _ in range(2):
         generate_block(True)
