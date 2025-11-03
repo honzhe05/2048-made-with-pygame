@@ -237,7 +237,7 @@ def resize(set_screen):
         canva_w = 360
         canva_h = 538
         screen_size = 306.5
-    render_screen = pygame.Surface((canva_w, canva_h))
+    render_screen = pygame.Surface((canva_w, canva_h + 300))
 
     row = 4  # screen and block
     screen_size_save = set_screen
@@ -250,14 +250,14 @@ def resize(set_screen):
     sc_w = row * block_width + grid
     sc_h = screen_size_save + 2 * (int(
         int(screen_size_save * 28.2 / 33 / row) * 8 / 7
-    ))
-    screen = pygame.display.set_mode((screen_size_save, sc_h))
+    )) + 500
+    screen = pygame.display.set_mode((sc_w, sc_h))
     scaled_surface = pygame.Surface((screen_size_save, sc_h))
 
     asize = screen_size / 5  # arrow buttons
     t = asize * 0.6
     agrid = asize / 10
-    apos = sc_h + 2 * grid
+    apos = canva_h + grid
     p = sc_w / 2 + asize / 2 + agrid
 
     a = t / 2 * math.sqrt(3)
@@ -827,7 +827,7 @@ def draw_undo_arrow(surface, center, size, color=(255, 255, 255)):
 
 
 def draw_grid(surface):
-    for i in range(2 * block_width + grid, sc_h - grid, block_width):
+    for i in range(2 * block_width + grid, canva_h - grid, block_width):
         for j in range(grid, sc_w - grid, block_width):
             rect_block = pygame.Rect(j, i, block, block)
             pygame.draw.rect(
@@ -896,12 +896,12 @@ def mouse_to_canvas(mouse_pos):
 
 
 def choose_screen_size():
-    sizes = [360, 480, 540, 720, 1080, 1440]
+    sizes = [360, 480, 720, 1080, 1440, 2160]
     word = [
-        "For mobile phones, we recommend 540px.",
+        "For mobile phones, I recommend 1080px.",
         "For computers, 360 or 480px is ideal.",
         "If you want the ultimate experience and flawless smoothness,",
-        "feel free to choose 1080 or even 1440px:)",
+        "feel free to choose 1440 or even 2160px:)",
         "", ""
     ]
 

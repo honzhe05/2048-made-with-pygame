@@ -896,12 +896,12 @@ def mouse_to_canvas(mouse_pos):
 
 
 def choose_screen_size():
-    sizes = [360, 480, 540, 720, 1080, 1440]
+    sizes = [360, 480, 720, 1080, 1440, 2160]
     word = [
-        "For mobile phones, we recommend 540px.",
+        "For mobile phones, I recommend 1080px.",
         "For computers, 360 or 480px is ideal.",
         "If you want the ultimate experience and flawless smoothness,",
-        "feel free to choose 1080 or even 1440px:)",
+        "feel free to choose 1440 or even 2160px:)",
         "", ""
     ]
 
