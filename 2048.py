@@ -492,9 +492,10 @@ def get_scan_order(step):
 
 
 def redraw_prev():
-    global board, undo_touch
+    global board, undo_touch, move_times
     board = [row[:] for row in board_prev]
     undo_touch = False
+    move_times -= 1
 
     all.empty()
     sprite_map.clear()
@@ -969,7 +970,6 @@ while running:
 
     all.update()
     all.draw(screen)
-
     arrow.update()
     arrow.draw(screen)
 
