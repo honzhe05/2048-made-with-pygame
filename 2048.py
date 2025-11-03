@@ -183,7 +183,8 @@ class arrow_keys(pygame.sprite.Sprite):
     def update(self):
         self.image.fill((0, 0, 0, 0))
         color = (180, 180, 180)
-        mouse_pos = pygame.mouse.get_pos()
+        mo_pos = pygame.mouse.get_pos()
+        mouse_pos = mouse_to_canvas(mo_pos)
 
         if self.rect.collidepoint(mouse_pos):
             color = (150, 150, 150)
@@ -217,6 +218,8 @@ def resize(set_screen):
     global t, agrid, apos, a, b, b1, c, d, pos, block_big
     global dir_pos, font_size_small, font, font_big
     global font_size_big, font_arrow, text_arrow
+    global scaled_surface, screen_size_save
+    global canva_w, canva_h, render_screen
 
     arrow.empty()
     all.empty()
@@ -226,17 +229,30 @@ def resize(set_screen):
     empty_positions.clear()
     text_cache.clear()
 
+    if set_screen > 700:
+        canva_w = 700
+        canva_h = 1040
+        screen_size = 595
+    else:
+        canva_w = 360
+        canva_h = 538
+        screen_size = 306.5
+    render_screen = pygame.Surface((canva_w, canva_h))
+
     row = 4  # screen and block
-    screen_size = set_screen
+    screen_size_save = set_screen
     set_screen = set_screen * 28.2 / 33
-    block = int(set_screen / row)
-    grid = int(block / 7)
+    block = round(screen_size / row)
+    grid = round(block / 7)
     grid_big = grid * 0.15
     block_big = block + grid_big * 2
     block_width = block + grid
     sc_w = row * block_width + grid
-    sc_h = sc_w + 2 * block_width
-    screen = pygame.display.set_mode((sc_w, sc_h))
+    sc_h = screen_size_save + 2 * (int(
+        int(screen_size_save * 28.2 / 33 / row) * 8 / 7
+    ))
+    screen = pygame.display.set_mode((screen_size_save, sc_h))
+    scaled_surface = pygame.Surface((screen_size_save, sc_h))
 
     asize = screen_size / 5  # arrow buttons
     t = asize * 0.6
@@ -300,6 +316,8 @@ def resize(set_screen):
                 all.add(p1)
                 sprite_map[(i, j)] = p1
 
+    save_data()
+
 
 background = (155, 135, 118)
 block_back = (189, 172, 152)
@@ -320,11 +338,16 @@ any_keydown = False
 
 row, screen_size, block, grid, grid_big = 4, 0, 0, 0, 0
 block_width, sc_w, sc_h, block_big = 0, 0, 0, 0
+screen_size_save = 0
 time = "None"
+
+render_screen = pygame.Surface((0, 0))
+scaled_surface = pygame.Surface((0, 0))
 
 asize, t, agrid, apos = 0, 0, 0, 0
 a, b, b1, c, d, p = 0, 0, 0, 0, 0, 0
 pos, dir_pos = [], []
+canva_w, canva_h = 0, 0
 
 font_size_small, font_size_big = 0, 0
 font = pygame.font.SysFont(None, 0)
@@ -520,7 +543,7 @@ def redraw_prev():
 
 
 # =========== part 2 ===========
-def update_score_label(text, text1, kind):
+def update_score_label(surface, text, text1, kind):
     color = (151, 138, 118)
     text = font.render(text, True, color)
     text_sc = font.render(text1, True, color)
@@ -529,7 +552,7 @@ def update_score_label(text, text1, kind):
         sc_w / 2 - 2 * grid, block / 2
     )
     pygame.draw.rect(
-        screen, (233, 231, 217),
+        surface, (233, 231, 217),
         popup, width=3 * kind,
         border_radius=int(screen_size / 30)
     )
@@ -542,45 +565,45 @@ def update_score_label(text, text1, kind):
     text_sc_rect.left = popup.left + text_grid
     text_sc_rect.centery = popup.centery
 
-    screen.blit(text, text_rect)
-    screen.blit(text_sc, text_sc_rect)
+    surface.blit(text, text_rect)
+    surface.blit(text_sc, text_sc_rect)
 
 
-def update_screen():
+def update_screen(surface):
     global best_score, undo_touch
 
-    screen.fill((243, 239, 229))
+    surface.fill((243, 239, 229))
     pygame.draw.rect(
-        screen, (252, 248, 240),
+        surface, (252, 248, 240),
         (0, grid, sc_w, sc_h - grid)
     )
 
     rx = screen_size / 4.5
-    rect_p = pygame.Rect(rx, 2 * grid, screen_size / 1.8, rx)
+    rect_p = pygame.Rect(rx + 1, 2 * grid, screen_size / 1.42 - 1, rx + 11)
     pygame.draw.rect(
-        screen, (232, 230, 216), rect_p,
+        surface, (232, 230, 216), rect_p,
         border_radius=int(screen_size / 20)
     )
 
     rect = pygame.Rect(0, 2 * block_width, sc_w, sc_w)
     pygame.draw.rect(
-        screen, background, rect,
+        surface, background, rect,
         border_radius=int(screen_size / 16)
     )
     best_score = max(score, best_score)
-    update_score_label(f"{score}", "SCORE", 0)
-    update_score_label(f"{best_score}", "BEST", 1)
+    update_score_label(surface, f"{score}", "SCORE", 0)
+    update_score_label(surface, f"{best_score}", "BEST", 1)
 
     r2 = int(screen_size / 11)
     r3 = r2 + int(screen_size / 27)
     reload_rect = pygame.Rect(
         sc_w * 0.85, block / 1.5, r2, r2
     )
-    draw_reload_icon(reload_rect.center, r2 / 2)
+    draw_reload_icon(surface, reload_rect.center, r2 / 2)
     resize_rect = pygame.Rect(
         sc_w * 0.05, block / 1.5, r2, r2
     )
-    draw_resize_icon(resize_rect.center, r2)
+    draw_resize_icon(surface, resize_rect.center, r2)
     undo_rect = pygame.Rect(
         sc_w * 0.25, block / 2.4, r3, r3
     )
@@ -595,32 +618,34 @@ def update_screen():
         color = (187, 171, 154)
         undo_touch = True
     pygame.draw.rect(
-        screen, color, undo_rect,
+        surface, color, undo_rect,
         border_radius=int(screen_size / 30)
     )
     px = screen_size / 36
     draw_undo_arrow(
-        (undo_rect.x + px, undo_rect.y + px), r2 * 0.8
+        surface, (undo_rect.x + px, undo_rect.y + px),
+        r2 * 0.8
     )
 
     undo1_rect = pygame.Rect(
         sc_w * 0.434, block / 2.4, r3, r3
     )
     pygame.draw.rect(
-        screen, (187, 171, 154), undo1_rect,
+        surface, (187, 171, 154), undo1_rect,
         border_radius=int(screen_size / 30)
     )
     undo2_rect = pygame.Rect(
         sc_w * 0.622, block / 2.4, r3, r3
     )
     pygame.draw.rect(
-        screen, (187, 171, 154), undo2_rect,
+        surface, (187, 171, 154), undo2_rect,
         border_radius=int(screen_size / 30)
     )
 
-    draw_grid()
+    draw_grid(surface)
 
-    mouse_pos = pygame.mouse.get_pos()
+    mo_pos = pygame.mouse.get_pos()
+    mouse_pos = mouse_to_canvas(mo_pos)
     mouse_click = pygame.mouse.get_pressed()[0]
     if (
         reload_rect.collidepoint(mouse_pos) and
@@ -681,7 +706,7 @@ def save_data():
         "undo_touch": undo_touch,
         "score": score,
         "best score": best_score,
-        "screen_size": screen_size,
+        "screen_size_save": screen_size_save,
         "first_moved": first_moved,
         "move_times": move_times
     }
@@ -697,9 +722,10 @@ def save_data():
 
 def load_data():
     file = get_save_path()
-    global board, score, best_score, screen_size
+    global board, score, best_score
     global first_moved, move_times, time
     global board_prev, undo_touch
+    global screen_size_save
 
     if os.path.exists(file) and os.path.getsize(file) > 0:
         with open(file, "r", encoding="utf-8") as f:
@@ -711,7 +737,7 @@ def load_data():
                 undo_touch = data.get("undo_touch", 0)
                 score = data.get("score", 0)
                 best_score = data.get("best score", 0)
-                screen_size = data.get("screen_size", 0)
+                screen_size_save = data.get("screen_size_save", 0)
                 first_moved = data.get("first_moved", 0)
                 move_times = data.get("move_times", 0)
             except json.JSONDecodeError:
@@ -722,45 +748,46 @@ def load_data():
 
 
 def init_game_state():
-    global board, score, best_score, screen_size
+    global board, score, best_score
     global first_moved, move_times, time
     global board_prev, undo_touch
+    global screen_size_save
 
     time = "None"
     board_prev = [[0]*4 for _ in range(4)]
     board = [[0]*4 for _ in range(4)]
     undo_touch = False
-    score, best_score, screen_size = 0, 0, 0
+    score, best_score, screen_size_save = 0, 0, 0
     first_moved = False
     move_times = 0
 
 
-def draw_resize_icon(center, size, color=(117, 100, 82)):
+def draw_resize_icon(surface, center, size, color=(117, 100, 82)):
     x, y = center
     box_rect = pygame.Rect(0, 0, size, size)
     box_rect.center = center
     line = int(screen_size / 100)
 
     pygame.draw.rect(
-        screen, color, box_rect,
+        surface, color, box_rect,
         width=line, border_radius=8
     )
 
     ax = box_rect.right - 2 * line
     ay = box_rect.bottom - 2 * line
-    pygame.draw.line(screen, color, (ax - line, ay), (ax, ay - 8), line)
+    pygame.draw.line(surface, color, (ax - line, ay), (ax, ay - 8), line)
 
     bx = box_rect.left + 2 * line
     by = box_rect.top + 2 * line
-    pygame.draw.line(screen, color, (bx + 8, by), (bx, by + 8), line)
+    pygame.draw.line(surface, color, (bx + 8, by), (bx, by + 8), line)
 
 
-def draw_reload_icon(center, r, color=(117, 100, 82)):
+def draw_reload_icon(surface, center, r, color=(117, 100, 82)):
     arc = pygame.Rect(0, 0, r * 2, r * 2)
     arc.center = center
     line = int(screen_size / 100)
     a1, a2 = math.radians(30), math.radians(330)
-    pygame.draw.arc(screen, color, arc, a1, a2, line)
+    pygame.draw.arc(surface, color, arc, a1, a2, line)
 
     tip = (
         center[0] + r * math.cos(a2),
@@ -774,10 +801,10 @@ def draw_reload_icon(center, r, color=(117, 100, 82)):
             tip[0] - dx * 1.5 - 5,
             tip[1] + dy * 1.1 - 5
         )
-        pygame.draw.line(screen, color, tip, end, line)
+        pygame.draw.line(surface, color, tip, end, line)
 
 
-def draw_undo_arrow(center, size, color=(255, 255, 255)):
+def draw_undo_arrow(surface, center, size, color=(255, 255, 255)):
     x, y = center
     x += 2
     y += 2
@@ -786,37 +813,37 @@ def draw_undo_arrow(center, size, color=(255, 255, 255)):
 
     rect = pygame.Rect(x + 2, y - thickness / 3, size, size)
     pygame.draw.arc(
-        screen, color, rect, math.radians(270),
+        surface, color, rect, math.radians(270),
         math.radians(100), thickness - 1
     )
     pygame.draw.line(
-        screen, color, (x + thickness, y), (x + r, y), thickness - 1
+        surface, color, (x + thickness, y), (x + r, y), thickness - 1
     )
     pygame.draw.line(
-        screen, color, (x + thickness, y + size - thickness * 0.7),
+        surface, color, (x + thickness, y + size - thickness * 0.7),
         (x + r, y + size - thickness * 0.7), thickness + 1
     )
-    screen.blit(text_arrow, (x - thickness / 2, y - size / 1.5))
+    surface.blit(text_arrow, (x - thickness / 2, y - size / 1.5))
 
 
-def draw_grid():
+def draw_grid(surface):
     for i in range(2 * block_width + grid, sc_h - grid, block_width):
         for j in range(grid, sc_w - grid, block_width):
             rect_block = pygame.Rect(j, i, block, block)
             pygame.draw.rect(
-                screen, block_back, rect_block,
+                surface, block_back, rect_block,
                 border_radius=int(screen_size / 53)
             )
 
 
-def draw_game_over_overlay():
+def draw_game_over_overlay(surface):
     overlay = pygame.Surface((sc_w, sc_h), pygame.SRCALPHA)
     overlay.fill((0, 0, 0, 100))
-    screen.blit(overlay, (0, 0))
+    surface.blit(overlay, (0, 0))
 
     r2 = int(screen_size / 8)
     reload_rect = pygame.Rect(
-        sc_w / 2 - r2 / 2, sc_h / 1.6, r2, r2
+        sc_w / 2 - r2 / 2, canva_h / 1.6, r2, r2
     )
 
     s = pygame.Surface(
@@ -827,11 +854,12 @@ def draw_game_over_overlay():
         border_radius=int(screen_size / 20)
     )
     s_rect = s.get_rect(center=reload_rect.center)
-    screen.blit(s, s_rect)
+    surface.blit(s, s_rect)
 
-    draw_reload_icon(reload_rect.center, r2 / 2, (255, 255, 255))
+    draw_reload_icon(surface, reload_rect.center, r2 / 2, (255, 255, 255))
 
-    mouse_pos = pygame.mouse.get_pos()
+    mo_pos = pygame.mouse.get_pos()
+    mouse_pos = mouse_to_canvas(mo_pos)
     mouse_click = pygame.mouse.get_pressed()[0]
     if (
         any_keydown or (
@@ -850,14 +878,21 @@ def draw_game_over_overlay():
         f"this time u moved {move_times} times!",
         True, (255, 255, 255)
     )
-    screen.blit(
+    surface.blit(
         text, text.get_rect(
-            center=(sc_w / 2, sc_h / 2 - r2 * 1.3))
+            center=(sc_w / 2, canva_h / 2 - r2 * 1.3))
     )
-    screen.blit(
+    surface.blit(
         text_move, text_move.get_rect(
-            center=(sc_w / 2, sc_h / 2.1 + r2 / 4))
+            center=(sc_w / 2, canva_h / 2.1 + r2 / 4))
     )
+
+
+def mouse_to_canvas(mouse_pos):
+    scale_ratio = min(screen_size_save / canva_w, sc_h / canva_h)
+    x = (mouse_pos[0]) / scale_ratio
+    y = (mouse_pos[1]) / scale_ratio
+    return x, y
 
 
 def choose_screen_size():
@@ -926,12 +961,12 @@ def choose_screen_size():
 
 
 load_data()
-if not screen_size:
+if not screen_size_save:
     s = choose_screen_size()
     for _ in range(2):
         generate_block(True)
 else:
-    s = screen_size
+    s = screen_size_save
     check_death()
 resize(s)
 
@@ -966,20 +1001,25 @@ while running:
         else:
             mouse_released = True
 
-    update_screen()
+    update_screen(render_screen)
 
     all.update()
-    all.draw(screen)
+    all.draw(render_screen)
     arrow.update()
-    arrow.draw(screen)
+    arrow.draw(render_screen)
 
     if game_over:
-        draw_game_over_overlay()
+        draw_game_over_overlay(render_screen)
 
     if pending_new_tile:
         generate_block(True)
         pending_new_tile = False
 
+    pygame.transform.scale(
+        render_screen,
+        (screen_size_save, sc_h), scaled_surface
+    )
+    screen.blit(scaled_surface, (0, 0))
     pygame.display.update()
 
 pygame.quit()
