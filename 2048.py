@@ -21,7 +21,7 @@ class Block(pygame.sprite.Sprite):
         self.start_pos = pygame.Vector2(self.X, self.Y)
         self.target_pos = pygame.Vector2(self.X, self.Y)
         self.move_progress = 1.0
-        self.move_speed = screen_size * 0.00085
+        self.move_speed = 0.52
         self.board_pos = (x, y)
 
         self.anim_size = int(block_big * 0.4)
@@ -183,8 +183,7 @@ class arrow_keys(pygame.sprite.Sprite):
     def update(self):
         self.image.fill((0, 0, 0, 0))
         color = (180, 180, 180)
-        mo_pos = pygame.mouse.get_pos()
-        mouse_pos = mouse_to_canvas(mo_pos)
+        mouse_pos = pygame.mouse.get_pos()
 
         if self.rect.collidepoint(mouse_pos):
             color = (150, 150, 150)
@@ -212,112 +211,75 @@ def find_sprite_at(board_x, board_y):
     return sprite_map.get((board_x, board_y))
 
 
-def resize(set_screen):
-    global row, screen_size, block, grid, grid_big
-    global block_width, sc_w, sc_h, screen, asize
-    global t, agrid, apos, a, b, b1, c, d, pos, block_big
-    global dir_pos, font_size_small, font, font_big
-    global font_size_big, font_arrow, text_arrow
-    global scaled_surface, screen_size_save
-    global canva_w, canva_h, render_screen
+all = pygame.sprite.Group()
+arrow = pygame.sprite.Group()
 
-    arrow.empty()
-    all.empty()
-    sprite_map.clear()
-    anim_list.clear()
-    path_dict.clear()
-    empty_positions.clear()
-    text_cache.clear()
+row = 4  # screen and block
+screen_size = 460
+block = round(screen_size / row)
+grid = round(block / 7)
+grid_big = grid * 0.15
+block_big = block + grid_big * 2
+block_width = block + grid
+sc_w = row * block_width + grid
+sc_h = sc_w + 2 * block_width + grid
 
-    if set_screen > 700:
-        canva_w = 700
-        canva_h = 1040
-        screen_size = 595
-    else:
-        canva_w = 360
-        canva_h = 538
-        screen_size = 306.5
-    render_screen = pygame.Surface((canva_w, canva_h + 300))
+info = pygame.display.Info()
+screen_width = info.current_w
+screen_height = info.current_h - 120
+aspect_ratio = screen_width / screen_height
 
-    row = 4  # screen and block
-    screen_size_save = set_screen
-    set_screen = set_screen * 28.2 / 33
-    block = round(screen_size / row)
-    grid = round(block / 7)
-    grid_big = grid * 0.15
-    block_big = block + grid_big * 2
-    block_width = block + grid
-    sc_w = row * block_width + grid
-    sc_h = screen_size_save + 2 * (int(
-        int(screen_size_save * 28.2 / 33 / row) * 8 / 7
-    )) + 500
-    screen = pygame.display.set_mode((sc_w, sc_h))
-    scaled_surface = pygame.Surface((screen_size_save, sc_h))
+canva_w = 539
+canva_h = int(canva_w / aspect_ratio)
 
-    asize = screen_size / 5  # arrow buttons
-    t = asize * 0.6
-    agrid = asize / 10
-    apos = canva_h + grid
-    p = sc_w / 2 + asize / 2 + agrid
+screen = pygame.display.set_mode((canva_w, canva_h), pygame.SCALED)
 
-    a = t / 2 * math.sqrt(3)
-    b = (asize - a) / 2.0 + (asize / 50)
-    b1 = (asize - a) / 2.0 - (asize / 50)
-    c = (asize - t) / 2
-    d = c + t / 2
-    pos = [
-        [(b, c), (a + b, d), (b, t + c)],
-        [(c, b), (t + c, b), (d, a + b)],
-        [(a + b1, c), (a + b1, t + c), (b1, d)],
-        [(c, a + b1), (t + c, a + b1), (d, b1)]
-    ]
-    dir_pos = [
-        (p, apos + asize + agrid),
-        (p - asize - agrid, apos + asize + agrid),
-        (p - 2 * asize - 2 * agrid, apos + asize + agrid),
-        (p - asize - agrid, apos)
-    ]
-    for i in range(4):
-        p2 = arrow_keys(i)
-        arrow.add(p2)
+asize = screen_size / 5  # arrow buttons
+t = asize * 0.6
+agrid = asize / 10
+apos = sc_w + 2 * block_width + 2 * grid
+p = sc_w / 2 + asize / 2 + agrid
 
-    font_size_small = int(screen_size / 20)  # fonts
-    font_size_big = int(screen_size / 6.5)
-    font = pygame.font.SysFont(
-        font_style, font_size_small
-    )
-    font_big = pygame.font.SysFont(
-        font_style, font_size_big
-    )
-    font_arrow = pygame.font.SysFont(
-        "arial", int(screen_size / 12)
-    )
-    font_arrow.set_bold(True)
-    font.set_bold(True)
-    font_big.set_bold(True)
+a = t / 2 * math.sqrt(3)
+b = (asize - a) / 2.0 + (asize / 50)
+b1 = (asize - a) / 2.0 - (asize / 50)
+c = (asize - t) / 2
+d = c + t / 2
+pos = [
+    [(b, c), (a + b, d), (b, t + c)],
+    [(c, b), (t + c, b), (d, a + b)],
+    [(a + b1, c), (a + b1, t + c), (b1, d)],
+    [(c, a + b1), (t + c, a + b1), (d, b1)]
+]
+dir_pos = [
+    (p, apos + asize + agrid),
+    (p - asize - agrid, apos + asize + agrid),
+    (p - 2 * asize - 2 * agrid, apos + asize + agrid),
+    (p - asize - agrid, apos)
+]
+for i in range(4):
+    p2 = arrow_keys(i)
+    arrow.add(p2)
 
-    text_arrow = font_arrow.render(
-        "<", True, (255, 255, 255)
-    )
+font_style = "comingsoon"
+font_size_small = int(screen_size / 20)  # fonts
+font_size_big = int(screen_size / 6.5)
+font = pygame.font.SysFont(
+    font_style, font_size_small
+)
+font_big = pygame.font.SysFont(
+    font_style, font_size_big
+)
+font_arrow = pygame.font.SysFont(
+    "arial", int(screen_size / 12)
+)
+font_arrow.set_bold(True)
+font.set_bold(True)
+font_big.set_bold(True)
 
-    check_death()
-    empty_positions.extend(  # redraw
-        (x, y) for x in range(4)
-        for y in range(4) if board[x][y] == 0
-    )
-
-    for i in range(4):
-        for j in range(4):
-            if board[i][j] != 0:
-                color = tile_colors.get(
-                    board[i][j], (60, 58, 50)
-                )
-                p1 = Block(color, i, j, board[i][j], False)
-                all.add(p1)
-                sprite_map[(i, j)] = p1
-
-    save_data()
-
+text_arrow = font_arrow.render(
+    "<", True, (255, 255, 255)
+)
 
 background = (155, 135, 118)
 block_back = (189, 172, 152)
@@ -336,34 +298,12 @@ dy = [0, 1, 0, -1]
 mouse_released, mouse_pressed = False, False
 any_keydown = False
 
-row, screen_size, block, grid, grid_big = 4, 0, 0, 0, 0
-block_width, sc_w, sc_h, block_big = 0, 0, 0, 0
-screen_size_save = 0
 time = "None"
-
-render_screen = pygame.Surface((0, 0))
-scaled_surface = pygame.Surface((0, 0))
-
-asize, t, agrid, apos = 0, 0, 0, 0
-a, b, b1, c, d, p = 0, 0, 0, 0, 0, 0
-pos, dir_pos = [], []
-canva_w, canva_h = 0, 0
-
-font_size_small, font_size_big = 0, 0
-font = pygame.font.SysFont(None, 0)
-font_big = pygame.font.SysFont(None, 0)
-font_arrow = pygame.font.SysFont("arial", 0)
-font_arrow.set_bold(True)
-text_arrow = font.render("<", True, (255, 255, 255))
-font_style = "comingsoon"
 
 score, best_score, move_times = 0, 0, 0
 
 first_moved, game_over = False, False
 pending_new_tile, undo_touch = False, False
-
-all = pygame.sprite.Group()
-arrow = pygame.sprite.Group()
 
 board = [[0]*4 for _ in range(4)]
 board_prev = [[0]*4 for _ in range(4)]
@@ -600,10 +540,6 @@ def update_screen(surface):
         sc_w * 0.85, block / 1.5, r2, r2
     )
     draw_reload_icon(surface, reload_rect.center, r2 / 2)
-    resize_rect = pygame.Rect(
-        sc_w * 0.05, block / 1.5, r2, r2
-    )
-    draw_resize_icon(surface, resize_rect.center, r2)
     undo_rect = pygame.Rect(
         sc_w * 0.25, block / 2.4, r3, r3
     )
@@ -644,20 +580,13 @@ def update_screen(surface):
 
     draw_grid(surface)
 
-    mo_pos = pygame.mouse.get_pos()
-    mouse_pos = mouse_to_canvas(mo_pos)
+    mouse_pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()[0]
     if (
         reload_rect.collidepoint(mouse_pos) and
         mouse_click and not game_over
     ):
         restart_game()
-    elif (
-        resize_rect.collidepoint(mouse_pos) and
-        mouse_click and not game_over
-    ):
-        s = choose_screen_size()
-        resize(s)
     elif (
         undo_rect.collidepoint(mouse_pos) and
         mouse_click and not game_over and
@@ -706,7 +635,6 @@ def save_data():
         "undo_touch": undo_touch,
         "score": score,
         "best score": best_score,
-        "screen_size_save": screen_size_save,
         "first_moved": first_moved,
         "move_times": move_times
     }
@@ -725,7 +653,6 @@ def load_data():
     global board, score, best_score
     global first_moved, move_times, time
     global board_prev, undo_touch
-    global screen_size_save
 
     if os.path.exists(file) and os.path.getsize(file) > 0:
         with open(file, "r", encoding="utf-8") as f:
@@ -737,9 +664,10 @@ def load_data():
                 undo_touch = data.get("undo_touch", 0)
                 score = data.get("score", 0)
                 best_score = data.get("best score", 0)
-                screen_size_save = data.get("screen_size_save", 0)
                 first_moved = data.get("first_moved", 0)
                 move_times = data.get("move_times", 0)
+
+                draw_block()
             except json.JSONDecodeError:
                 init_game_state()
 
@@ -751,35 +679,35 @@ def init_game_state():
     global board, score, best_score
     global first_moved, move_times, time
     global board_prev, undo_touch
-    global screen_size_save
 
     time = "None"
     board_prev = [[0]*4 for _ in range(4)]
     board = [[0]*4 for _ in range(4)]
     undo_touch = False
-    score, best_score, screen_size_save = 0, 0, 0
+    score, best_score = 0, 0
     first_moved = False
     move_times = 0
 
+    for i in range(2):
+        generate_block(True)
 
-def draw_resize_icon(surface, center, size, color=(117, 100, 82)):
-    x, y = center
-    box_rect = pygame.Rect(0, 0, size, size)
-    box_rect.center = center
-    line = int(screen_size / 100)
 
-    pygame.draw.rect(
-        surface, color, box_rect,
-        width=line, border_radius=8
+def draw_block():
+    check_death()
+    empty_positions.extend(
+        (x, y) for x in range(4)
+        for y in range(4) if board[x][y] == 0
     )
 
-    ax = box_rect.right - 2 * line
-    ay = box_rect.bottom - 2 * line
-    pygame.draw.line(surface, color, (ax - line, ay), (ax, ay - 8), line)
-
-    bx = box_rect.left + 2 * line
-    by = box_rect.top + 2 * line
-    pygame.draw.line(surface, color, (bx + 8, by), (bx, by + 8), line)
+    for i in range(4):
+        for j in range(4):
+            if board[i][j] != 0:
+                color = tile_colors.get(
+                    board[i][j], (60, 58, 50)
+                )
+                p1 = Block(color, i, j, board[i][j], False)
+                all.add(p1)
+                sprite_map[(i, j)] = p1
 
 
 def draw_reload_icon(surface, center, r, color=(117, 100, 82)):
@@ -827,7 +755,7 @@ def draw_undo_arrow(surface, center, size, color=(255, 255, 255)):
 
 
 def draw_grid(surface):
-    for i in range(2 * block_width + grid, canva_h - grid, block_width):
+    for i in range(2 * block_width + grid, sc_w + 2 * block, block_width):
         for j in range(grid, sc_w - grid, block_width):
             rect_block = pygame.Rect(j, i, block, block)
             pygame.draw.rect(
@@ -858,8 +786,7 @@ def draw_game_over_overlay(surface):
 
     draw_reload_icon(surface, reload_rect.center, r2 / 2, (255, 255, 255))
 
-    mo_pos = pygame.mouse.get_pos()
-    mouse_pos = mouse_to_canvas(mo_pos)
+    mouse_pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()[0]
     if (
         any_keydown or (
@@ -888,93 +815,13 @@ def draw_game_over_overlay(surface):
     )
 
 
-def mouse_to_canvas(mouse_pos):
-    scale_ratio = min(screen_size_save / canva_w, sc_h / canva_h)
-    x = (mouse_pos[0]) / scale_ratio
-    y = (mouse_pos[1]) / scale_ratio
-    return x, y
-
-
-def choose_screen_size():
-    sizes = [360, 480, 720, 1080, 1440, 2160]
-    word = [
-        "For mobile phones, I recommend 1080px.",
-        "For computers, 360 or 480px is ideal.",
-        "If you want the ultimate experience and flawless smoothness,",
-        "feel free to choose 1440 or even 2160px:)",
-        "", ""
-    ]
-
-    label_y = 380
-    spacing = 20
-    btn_w, btn_h = 240, 100
-    margin_x, margin_y = 100, 60
-    screen = pygame.display.set_mode((720, 550))
-
-    font = pygame.font.SysFont("cutivemono", 50)
-    font.set_bold(True)
-    font_small = pygame.font.SysFont("cutivemono", 17)
-    font.set_bold(True)
-
-    while True:
-        screen.fill((252, 248, 240))
-
-        for i, s in enumerate(sizes):
-            row = i // 2
-            col = i % 2
-            x = margin_x + col * (btn_w + spacing)
-            y = margin_y + row * (btn_h + spacing)
-            rect = pygame.Rect(x, y, btn_w, btn_h)
-
-            label = font.render(
-                f"{s} px", True, (60, 58, 50)
-            )
-            label_rect = label.get_rect(center=rect.center)
-            screen.blit(label, label_rect)
-
-            rect1 = pygame.Rect(
-                0, label_y + i * 25, 720, 100
-            )
-            rect1.centerx = 360
-            label1 = font_small.render(
-                word[i], True, (60, 58, 50)
-            )
-            label_rect1 = label1.get_rect(
-                center=rect1.center
-            )
-            screen.blit(label1, label_rect1)
-
-            mouse_pos = pygame.mouse.get_pos()
-            if rect.collidepoint(mouse_pos):
-                pygame.draw.rect(screen, (200, 200, 200), rect, 2)
-                if pygame.mouse.get_pressed()[0]:
-                    return s
-            else:
-                pygame.draw.rect(screen, (180, 180, 180), rect, 1)
-
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-        pygame.display.update()
-
-
 load_data()
-if not screen_size_save:
-    s = choose_screen_size()
-    for _ in range(2):
-        generate_block(True)
-else:
-    s = screen_size_save
-    check_death()
-resize(s)
 
 running = True
 while running:
     mouse_released, mouse_pressed = False, False
     any_keydown = False
-    clock.tick(60)
+    clock.tick(30)
 
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
@@ -1001,25 +848,20 @@ while running:
         else:
             mouse_released = True
 
-    update_screen(render_screen)
+    update_screen(screen)
 
     all.update()
-    all.draw(render_screen)
+    all.draw(screen)
     arrow.update()
-    arrow.draw(render_screen)
+    arrow.draw(screen)
 
     if game_over:
-        draw_game_over_overlay(render_screen)
+        draw_game_over_overlay(screen)
 
     if pending_new_tile:
         generate_block(True)
         pending_new_tile = False
 
-    pygame.transform.scale(
-        render_screen,
-        (screen_size_save, sc_h), scaled_surface
-    )
-    screen.blit(scaled_surface, (0, 0))
     pygame.display.update()
 
 pygame.quit()
