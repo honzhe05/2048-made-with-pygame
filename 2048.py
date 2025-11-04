@@ -21,7 +21,7 @@ class Block(pygame.sprite.Sprite):
         self.start_pos = pygame.Vector2(self.X, self.Y)
         self.target_pos = pygame.Vector2(self.X, self.Y)
         self.move_progress = 1.0
-        self.move_speed = 0.52
+        self.move_speed = 0.45
         self.board_pos = (x, y)
 
         self.anim_size = int(block_big * 0.4)
@@ -55,6 +55,11 @@ class Block(pygame.sprite.Sprite):
         return surf
 
     def update(self):
+        if self.move_progress < 1.0:
+            self._update_position()
+            self._update_animation()
+            return
+
         self._process_path_moves()
         self._update_position()
         self._update_animation()
