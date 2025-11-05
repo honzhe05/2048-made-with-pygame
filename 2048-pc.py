@@ -988,6 +988,7 @@ while running:
     if pending_new_tile:
         generate_block(True)
         pending_new_tile = False
+        alpha = 0
 
     pygame.transform.scale(
         render_screen,
