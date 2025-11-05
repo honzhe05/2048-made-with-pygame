@@ -96,7 +96,7 @@ class Block(pygame.sprite.Sprite):
     def _merge_blocks(self, sprite, sprite2, start, end):
         del path_dict[start]
         value = sprite2.value * 2
-        color = tile_colors.get(value, (60, 58, 50))
+        color = tile_colors.get(value, defult_color)
 
         sprite.kill()
         all.remove(sprite)
@@ -208,13 +208,12 @@ class arrow_keys(pygame.sprite.Sprite):
         )
 
 
-pygame.init()
-clock = pygame.time.Clock()
-
-
 def find_sprite_at(board_x, board_y):
     return sprite_map.get((board_x, board_y))
 
+
+pygame.init()
+clock = pygame.time.Clock()
 
 all = pygame.sprite.Group()
 arrow = pygame.sprite.Group()
@@ -288,6 +287,7 @@ text_arrow = font_arrow.render(
 
 background = (155, 135, 118)
 block_back = (189, 172, 152)
+defult_color = (60, 58, 50)
 tile_colors = {
     2: (238, 228, 218), 4: (237, 224, 200),
     8: (242, 177, 121), 16: (245, 149, 99),
@@ -301,11 +301,11 @@ dx = [1, 0, -1, 0]
 dy = [0, 1, 0, -1]
 
 mouse_released, mouse_pressed = False, False
-any_keydown = False
 
 time = "None"
 
 score, best_score, move_times = 0, 0, 0
+last_score = 0
 
 first_moved, game_over = False, False
 pending_new_tile, undo_touch = False, False
@@ -355,7 +355,7 @@ def generate_block(anim=False):
 
     num = 4 if random.randint(0, 10) == 0 else 2
     board[x][y] = num
-    color = tile_colors.get(num, (60, 58, 50))
+    color = tile_colors.get(num, defult_color)
 
     if find_sprite_at(x, y) is None:
         p1 = Block(color, x, y, num, anim)
@@ -394,14 +394,17 @@ def death():
                     if board[i][j] == board[x][y]:
                         return
 
+    save_data()
     game_over = True
 
 
 def moving(step):
     global first_moved, board_prev, undo_touch
+    global last_score, score
     first_moved, undo_touch = True, True
 
     board_prev = [row[:] for row in board]
+    last_score = score
     q = deque()
     visited = [[False]*4 for _ in range(4)]
 
@@ -416,7 +419,6 @@ def moving(step):
         nx, ny = x + dx[step], y + dy[step]
         start, end = (x, y), (nx, ny)
         find = False
-        global score
 
         if 0 <= nx < row and 0 <= ny < row:
             if board[nx][ny] == 0:
@@ -461,15 +463,31 @@ def get_scan_order(step):
 
 def redraw_prev():
     global board, undo_touch, move_times
+    global board_prev, score, last_score
+    global best_score
+
     board = [row[:] for row in board_prev]
+    board_prev = [[0]*4 for _ in range(4)]
     undo_touch = False
     move_times -= 1
+
+    if best_score == score:
+        best_score = last_score
+    score = last_score
+    last_score = 0
+
+    save_data()
 
     all.empty()
     sprite_map.clear()
     anim_list.clear()
     path_dict.clear()
     empty_positions.clear()
+    regenerate()
+
+
+def regenerate():
+    check_death()
 
     empty_positions.extend(
         (x, y) for x in range(4)
@@ -480,7 +498,7 @@ def redraw_prev():
         for j in range(4):
             if board[i][j] != 0:
                 color = tile_colors.get(
-                    board[i][j], (60, 58, 50)
+                    board[i][j], defult_color
                 )
                 p1 = Block(color, i, j, board[i][j], False)
                 all.add(p1)
@@ -638,6 +656,7 @@ def save_data():
         "board_prev": board_prev,
         "board": board,
         "undo_touch": undo_touch,
+        "last score": last_score,
         "score": score,
         "best score": best_score,
         "first_moved": first_moved,
@@ -657,7 +676,7 @@ def load_data():
     file = get_save_path()
     global board, score, best_score
     global first_moved, move_times, time
-    global board_prev, undo_touch
+    global board_prev, undo_touch, last_score
 
     if os.path.exists(file) and os.path.getsize(file) > 0:
         with open(file, "r", encoding="utf-8") as f:
@@ -667,12 +686,13 @@ def load_data():
                 board_prev = data.get("board_prev", 0)
                 board = data.get("board", 0)
                 undo_touch = data.get("undo_touch", 0)
+                last_score = data.get("last score", 0)
                 score = data.get("score", 0)
                 best_score = data.get("best score", 0)
                 first_moved = data.get("first_moved", 0)
                 move_times = data.get("move_times", 0)
 
-                draw_block()
+                regenerate()
             except json.JSONDecodeError:
                 init_game_state()
 
@@ -681,38 +701,20 @@ def load_data():
 
 
 def init_game_state():
-    global board, score, best_score
+    global board, score, best_score, last_score
     global first_moved, move_times, time
-    global board_prev, undo_touch
+    global board_prev, undo_touch, last_score
 
     time = "None"
     board_prev = [[0]*4 for _ in range(4)]
     board = [[0]*4 for _ in range(4)]
     undo_touch = False
-    score, best_score = 0, 0
+    last_score, score, best_score = 0, 0, 0
     first_moved = False
     move_times = 0
 
     for i in range(2):
         generate_block(True)
-
-
-def draw_block():
-    check_death()
-    empty_positions.extend(
-        (x, y) for x in range(4)
-        for y in range(4) if board[x][y] == 0
-    )
-
-    for i in range(4):
-        for j in range(4):
-            if board[i][j] != 0:
-                color = tile_colors.get(
-                    board[i][j], (60, 58, 50)
-                )
-                p1 = Block(color, i, j, board[i][j], False)
-                all.add(p1)
-                sprite_map[(i, j)] = p1
 
 
 def draw_reload_icon(surface, center, r, color=(117, 100, 82)):
@@ -776,7 +778,7 @@ def draw_game_over_overlay(surface):
 
     r2 = int(screen_size / 8)
     reload_rect = pygame.Rect(
-        sc_w / 2 - r2 / 2, canva_h / 1.6, r2, r2
+        sc_w / 2 - r2 / 2, sc_w * 0.94, r2, r2
     )
 
     s = pygame.Surface(
@@ -794,10 +796,8 @@ def draw_game_over_overlay(surface):
     mouse_pos = pygame.mouse.get_pos()
     mouse_click = pygame.mouse.get_pressed()[0]
     if (
-        any_keydown or (
-            reload_rect.collidepoint(mouse_pos) and
-            mouse_click
-        )
+        reload_rect.collidepoint(mouse_pos) and
+        mouse_click
     ):
         restart_game()
         global game_over
@@ -812,11 +812,11 @@ def draw_game_over_overlay(surface):
     )
     surface.blit(
         text, text.get_rect(
-            center=(sc_w / 2, canva_h / 2 - r2 * 1.3))
+            center=(sc_w / 2, sc_w / 1.62))
     )
     surface.blit(
         text_move, text_move.get_rect(
-            center=(sc_w / 2, canva_h / 2.1 + r2 / 4))
+            center=(sc_w / 2, sc_w / 1.37))
     )
 
 
@@ -825,27 +825,12 @@ load_data()
 running = True
 while running:
     mouse_released, mouse_pressed = False, False
-    any_keydown = False
     clock.tick(30)
 
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
             save_data()
             running = False
-        elif e.type == pygame.KEYDOWN:
-            any_keydown = True
-
-            if any_block_moving():
-                break
-
-            if e.key in [pygame.K_RIGHT, pygame.K_d]:
-                moving(0)
-            elif e.key in [pygame.K_DOWN, pygame.K_s]:
-                moving(1)
-            elif e.key in [pygame.K_LEFT, pygame.K_a]:
-                moving(2)
-            elif e.key in [pygame.K_UP, pygame.K_w]:
-                moving(3)
 
         mouse_click = pygame.mouse.get_pressed()[0]
         if mouse_click:

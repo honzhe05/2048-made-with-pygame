@@ -91,7 +91,7 @@ class Block(pygame.sprite.Sprite):
     def _merge_blocks(self, sprite, sprite2, start, end):
         del path_dict[start]
         value = sprite2.value * 2
-        color = tile_colors.get(value, (60, 58, 50))
+        color = tile_colors.get(value, defult_color)
 
         sprite.kill()
         all.remove(sprite)
@@ -171,39 +171,6 @@ class Block(pygame.sprite.Sprite):
         self.move_progress = 0.0
 
 
-class arrow_keys(pygame.sprite.Sprite):
-    def __init__(self, Dir):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((asize, asize), pygame.SRCALPHA)
-        self.dir = Dir
-        self.rect = self.image.get_rect()
-        self.rect.x = dir_pos[self.dir][0]
-        self.rect.y = dir_pos[self.dir][1]
-
-    def update(self):
-        self.image.fill((0, 0, 0, 0))
-        color = (180, 180, 180)
-        mo_pos = pygame.mouse.get_pos()
-        mouse_pos = mouse_to_canvas(mo_pos)
-
-        if self.rect.collidepoint(mouse_pos):
-            color = (150, 150, 150)
-            if mouse_pressed:
-                color = (160, 160, 160)
-            elif mouse_released:
-                color = (180, 180, 180)
-                moving(self.dir)
-
-        pygame.draw.rect(
-            self.image, color,
-            self.image.get_rect(),
-            border_radius=int(screen_size / 63)
-        )
-        pygame.draw.polygon(
-            self.image, (30, 30, 30), pos[self.dir]
-        )
-
-
 pygame.init()
 clock = pygame.time.Clock()
 
@@ -214,12 +181,11 @@ def find_sprite_at(board_x, board_y):
 
 def resize(set_screen):
     global row, screen_size, block, grid, grid_big
-    global block_width, sc_w, sc_h, screen, asize
-    global t, agrid, apos, a, b, b1, c, d, pos, block_big
-    global dir_pos, font_size_small, font, font_big
-    global font_size_big, font_arrow, text_arrow
-    global scaled_surface, screen_size_save
-    global canva_w, canva_h, render_screen
+    global block_width, sc_w, sc_h, screen
+    global block_big, font_size_small, text_arrow
+    global font, font_big, font_size_big, canva_w
+    global font_arrow, scaled_surface, canva_h
+    global screen_size_save, render_screen
 
     arrow.empty()
     all.empty()
@@ -254,33 +220,6 @@ def resize(set_screen):
     screen = pygame.display.set_mode((screen_size_save, sc_h))
     scaled_surface = pygame.Surface((screen_size_save, sc_h))
 
-    asize = screen_size / 5  # arrow buttons
-    t = asize * 0.6
-    agrid = asize / 10
-    apos = sc_h + 2 * grid
-    p = sc_w / 2 + asize / 2 + agrid
-
-    a = t / 2 * math.sqrt(3)
-    b = (asize - a) / 2.0 + (asize / 50)
-    b1 = (asize - a) / 2.0 - (asize / 50)
-    c = (asize - t) / 2
-    d = c + t / 2
-    pos = [
-        [(b, c), (a + b, d), (b, t + c)],
-        [(c, b), (t + c, b), (d, a + b)],
-        [(a + b1, c), (a + b1, t + c), (b1, d)],
-        [(c, a + b1), (t + c, a + b1), (d, b1)]
-    ]
-    dir_pos = [
-        (p, apos + asize + agrid),
-        (p - asize - agrid, apos + asize + agrid),
-        (p - 2 * asize - 2 * agrid, apos + asize + agrid),
-        (p - asize - agrid, apos)
-    ]
-    for i in range(4):
-        p2 = arrow_keys(i)
-        arrow.add(p2)
-
     font_size_small = int(screen_size / 20)  # fonts
     font_size_big = int(screen_size / 6.5)
     font = pygame.font.SysFont(
@@ -310,7 +249,7 @@ def resize(set_screen):
         for j in range(4):
             if board[i][j] != 0:
                 color = tile_colors.get(
-                    board[i][j], (60, 58, 50)
+                    board[i][j], defult_color
                 )
                 p1 = Block(color, i, j, board[i][j], False)
                 all.add(p1)
@@ -321,6 +260,7 @@ def resize(set_screen):
 
 background = (155, 135, 118)
 block_back = (189, 172, 152)
+defult_color = (60, 58, 50)
 tile_colors = {
     2: (238, 228, 218), 4: (237, 224, 200),
     8: (242, 177, 121), 16: (245, 149, 99),
@@ -344,9 +284,6 @@ time = "None"
 render_screen = pygame.Surface((0, 0))
 scaled_surface = pygame.Surface((0, 0))
 
-asize, t, agrid, apos = 0, 0, 0, 0
-a, b, b1, c, d, p = 0, 0, 0, 0, 0, 0
-pos, dir_pos = [], []
 canva_w, canva_h = 0, 0
 
 font_size_small, font_size_big = 0, 0
@@ -358,6 +295,7 @@ text_arrow = font.render("<", True, (255, 255, 255))
 font_style = "comingsoon"
 
 score, best_score, move_times = 0, 0, 0
+last_score = 0
 
 first_moved, game_over = False, False
 pending_new_tile, undo_touch = False, False
@@ -410,7 +348,7 @@ def generate_block(anim=False):
 
     num = 4 if random.randint(0, 10) == 0 else 2
     board[x][y] = num
-    color = tile_colors.get(num, (60, 58, 50))
+    color = tile_colors.get(num, defult_color)
 
     if find_sprite_at(x, y) is None:
         p1 = Block(color, x, y, num, anim)
@@ -449,14 +387,17 @@ def death():
                     if board[i][j] == board[x][y]:
                         return
 
+    save_data()
     game_over = True
 
 
 def moving(step):
     global first_moved, board_prev, undo_touch
+    global last_score, score
     first_moved, undo_touch = True, True
 
     board_prev = [row[:] for row in board]
+    last_score = score
     q = deque()
     visited = [[False]*4 for _ in range(4)]
 
@@ -471,7 +412,6 @@ def moving(step):
         nx, ny = x + dx[step], y + dy[step]
         start, end = (x, y), (nx, ny)
         find = False
-        global score
 
         if 0 <= nx < row and 0 <= ny < row:
             if board[nx][ny] == 0:
@@ -516,15 +456,31 @@ def get_scan_order(step):
 
 def redraw_prev():
     global board, undo_touch, move_times
+    global board_prev, score, last_score
+    global best_score
+
     board = [row[:] for row in board_prev]
+    board_prev = [[0]*4 for _ in range(4)]
     undo_touch = False
     move_times -= 1
+
+    if best_score == score:
+        best_score = last_score
+    score = last_score
+    last_score = 0
+
+    save_data()
 
     all.empty()
     sprite_map.clear()
     anim_list.clear()
     path_dict.clear()
     empty_positions.clear()
+    regenerate()
+
+
+def regenerate():
+    check_death()
 
     empty_positions.extend(
         (x, y) for x in range(4)
@@ -535,7 +491,7 @@ def redraw_prev():
         for j in range(4):
             if board[i][j] != 0:
                 color = tile_colors.get(
-                    board[i][j], (60, 58, 50)
+                    board[i][j], defult_color
                 )
                 p1 = Block(color, i, j, board[i][j], False)
                 all.add(p1)
@@ -687,7 +643,7 @@ def restart_game():
         first_moved = False
 
 
-def get_save_path(filename="2048_data.json"):
+def get_save_path(filename="2048pc_data.json"):
     folder = os.path.dirname(__file__)
     return os.path.join(folder, filename)
 
@@ -704,6 +660,7 @@ def save_data():
         "board_prev": board_prev,
         "board": board,
         "undo_touch": undo_touch,
+        "last score": last_score,
         "score": score,
         "best score": best_score,
         "screen_size_save": screen_size_save,
@@ -725,7 +682,7 @@ def load_data():
     global board, score, best_score
     global first_moved, move_times, time
     global board_prev, undo_touch
-    global screen_size_save
+    global screen_size_save, last_score
 
     if os.path.exists(file) and os.path.getsize(file) > 0:
         with open(file, "r", encoding="utf-8") as f:
@@ -735,6 +692,7 @@ def load_data():
                 board_prev = data.get("board_prev", 0)
                 board = data.get("board", 0)
                 undo_touch = data.get("undo_touch", 0)
+                last_score = data.get("last score", 0)
                 score = data.get("score", 0)
                 best_score = data.get("best score", 0)
                 screen_size_save = data.get("screen_size_save", 0)
@@ -751,13 +709,14 @@ def init_game_state():
     global board, score, best_score
     global first_moved, move_times, time
     global board_prev, undo_touch
-    global screen_size_save
+    global screen_size_save, last_score
 
     time = "None"
     board_prev = [[0]*4 for _ in range(4)]
     board = [[0]*4 for _ in range(4)]
     undo_touch = False
     score, best_score, screen_size_save = 0, 0, 0
+    last_score = 0
     first_moved = False
     move_times = 0
 
@@ -927,7 +886,7 @@ def choose_screen_size():
             rect = pygame.Rect(x, y, btn_w, btn_h)
 
             label = font.render(
-                f"{s} px", True, (60, 58, 50)
+                f"{s} px", True, defult_color
             )
             label_rect = label.get_rect(center=rect.center)
             screen.blit(label, label_rect)
@@ -937,7 +896,7 @@ def choose_screen_size():
             )
             rect1.centerx = 360
             label1 = font_small.render(
-                word[i], True, (60, 58, 50)
+                word[i], True, defult_color
             )
             label_rect1 = label1.get_rect(
                 center=rect1.center
