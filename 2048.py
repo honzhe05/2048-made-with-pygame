@@ -835,6 +835,10 @@ def show_last_save_time(surface, alpha, p):
     return alpha - 8, p + 0.01
 
 
+for _ in range(3):
+    all.update()
+    arrow.update()
+
 alpha, p = 255, 2.0
 running = True
 while running:
@@ -869,7 +873,7 @@ while running:
         alpha = 0
 
     if alpha > 0:
-        alpha, p= show_last_save_time(
+        alpha, p = show_last_save_time(
             screen, alpha, p
         )
 

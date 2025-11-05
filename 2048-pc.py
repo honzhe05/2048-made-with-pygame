@@ -945,6 +945,9 @@ def show_last_save_time(surface, alpha, p):
     return alpha - 15, p + 0.03
 
 
+for _ in range(3):
+    all.update()
+
 alpha, p = 255, 2.0
 running = True
 while running:
@@ -997,7 +1000,7 @@ while running:
     screen.blit(scaled_surface, (0, 0))
 
     if alpha > 0:
-        alpha, p= show_last_save_time(
+        alpha, p = show_last_save_time(
             screen, alpha, p
         )
 
