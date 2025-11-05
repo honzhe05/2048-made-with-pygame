@@ -229,13 +229,15 @@ sc_w = row * block_width + grid
 sc_h = sc_w + 2 * block_width + grid
 
 info = pygame.display.Info()
+
+NAV_BAR = 123
 screen_width = info.current_w
-screen_height = info.current_h - 120
+screen_height = info.current_h - NAV_BAR
+# camera cutout -> no solution
 aspect_ratio = screen_width / screen_height
 
-canva_w = 539
+canva_w = 540
 canva_h = int(canva_w / aspect_ratio)
-
 screen = pygame.display.set_mode((canva_w, canva_h), pygame.SCALED)
 
 asize = screen_size / 5  # arrow buttons
@@ -531,7 +533,6 @@ def update_score_label(surface, text, text1, kind):
 def update_screen(surface):
     global best_score, undo_touch
 
-    surface.fill((243, 239, 229))
     pygame.draw.rect(
         surface, (252, 248, 240),
         (0, grid, sc_w, sc_h - grid)
@@ -834,6 +835,7 @@ while running:
         else:
             mouse_released = True
 
+    screen.fill((243, 239, 229))
     update_screen(screen)
 
     all.update()
