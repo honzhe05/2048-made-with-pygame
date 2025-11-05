@@ -301,7 +301,6 @@ first_moved, game_over = False, False
 pending_new_tile, undo_touch = False, False
 
 all = pygame.sprite.Group()
-arrow = pygame.sprite.Group()
 
 board = [[0]*4 for _ in range(4)]
 board_prev = [[0]*4 for _ in range(4)]
@@ -371,6 +370,9 @@ def check_death():
         for y in range(4):
             if board[x][y] == 0:
                 place = True
+                break
+        if place:
+            break
 
     if not place:
         death()
@@ -964,8 +966,6 @@ while running:
 
     all.update()
     all.draw(render_screen)
-    arrow.update()
-    arrow.draw(render_screen)
 
     if game_over:
         draw_game_over_overlay(render_screen)
