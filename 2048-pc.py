@@ -186,6 +186,7 @@ def resize(set_screen):
     global font, font_big, font_size_big, canva_w
     global font_arrow, scaled_surface, canva_h
     global screen_size_save, render_screen
+    global font_time
 
     all.empty()
     sprite_map.clear()
@@ -227,12 +228,16 @@ def resize(set_screen):
     font_big = pygame.font.SysFont(
         font_style, font_size_big
     )
+    font_time = pygame.font.SysFont(
+        font_style, int(screen_size_save * 0.05)
+    )
     font_arrow = pygame.font.SysFont(
         "arial", int(screen_size / 12)
     )
     font_arrow.set_bold(True)
     font.set_bold(True)
     font_big.set_bold(True)
+    font_time.set_bold(True)
 
     text_arrow = font_arrow.render(
         "<", True, (255, 255, 255)
@@ -288,6 +293,7 @@ canva_w, canva_h = 0, 0
 font_size_small, font_size_big = 0, 0
 font = pygame.font.SysFont(None, 0)
 font_big = pygame.font.SysFont(None, 0)
+font_time = pygame.font.SysFont(None, 0)
 font_arrow = pygame.font.SysFont("arial", 0)
 font_arrow.set_bold(True)
 text_arrow = font.render("<", True, (255, 255, 255))
@@ -923,6 +929,23 @@ else:
     check_death()
 resize(s)
 
+
+def show_last_save_time(surface, alpha, p):
+    if time == "None":
+        return
+
+    text = font_time.render(
+        f"last saved: {time}", True, (255, 255, 255)
+    )
+    text.set_alpha(alpha)
+    text_rect = text.get_rect(
+        center=(screen_size_save / 2, sc_h / p)
+    )
+    surface.blit(text, text_rect)
+    return alpha - 15, p + 0.03
+
+
+alpha, p = 255, 2.0
 running = True
 while running:
     mouse_released, mouse_pressed = False, False
@@ -971,6 +994,12 @@ while running:
         (screen_size_save, sc_h), scaled_surface
     )
     screen.blit(scaled_surface, (0, 0))
+
+    if alpha > 0:
+        alpha, p= show_last_save_time(
+            screen, alpha, p
+        )
+
     pygame.display.update()
 
 pygame.quit()

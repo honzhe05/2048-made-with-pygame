@@ -819,6 +819,23 @@ def draw_game_over_overlay(surface):
 
 load_data()
 
+
+def show_last_save_time(surface, alpha, p):
+    if time == "None":
+        return
+
+    text = font.render(
+        f"last saved: {time}", True, (255, 255, 255)
+    )
+    text.set_alpha(alpha)
+    text_rect = text.get_rect(
+        center=(sc_w / 2, sc_h / p)
+    )
+    surface.blit(text, text_rect)
+    return alpha - 8, p + 0.01
+
+
+alpha, p = 255, 2.0
 running = True
 while running:
     mouse_released, mouse_pressed = False, False
@@ -849,6 +866,12 @@ while running:
     if pending_new_tile:
         generate_block(True)
         pending_new_tile = False
+        alpha = 0
+
+    if alpha > 0:
+        alpha, p= show_last_save_time(
+            screen, alpha, p
+        )
 
     pygame.display.update()
 
