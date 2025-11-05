@@ -187,7 +187,6 @@ def resize(set_screen):
     global font_arrow, scaled_surface, canva_h
     global screen_size_save, render_screen
 
-    arrow.empty()
     all.empty()
     sprite_map.clear()
     anim_list.clear()
@@ -364,18 +363,11 @@ def any_block_moving():
 
 
 def check_death():
-    place = False
-
     for x in range(4):
         for y in range(4):
             if board[x][y] == 0:
-                place = True
-                break
-        if place:
-            break
-
-    if not place:
-        death()
+                return
+    death()
 
 
 def death():

@@ -372,15 +372,11 @@ def any_block_moving():
 
 
 def check_death():
-    place = False
-
     for x in range(4):
         for y in range(4):
             if board[x][y] == 0:
-                place = True
-
-    if not place:
-        death()
+                return
+    death()
 
 
 def death():
